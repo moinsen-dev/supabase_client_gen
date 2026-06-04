@@ -113,13 +113,3 @@ dynamic _yamlToJson(dynamic node) {
   if (node is YamlList) return node.map(_yamlToJson).toList();
   return node;
 }
-
-String? _findWorkspaceRoot() {
-  var dir = Directory.current;
-  while (true) {
-    if (File('${dir.path}/pubspec.yaml').existsSync()) return dir.path;
-    final parent = dir.parent;
-    if (parent.path == dir.path) return null;
-    dir = parent;
-  }
-}
