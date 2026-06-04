@@ -178,7 +178,7 @@ bool _checkMigrations(SupabaseContract contract, String migrationsDir, bool json
     return false;
   }
   final migrationDate = latest.substring(0, 8);
-  final contractDate = contract.date.replaceAll('-', '');
+  final contractDate = contract.contract.date.replaceAll('-', '');
   final newer = migrationDate.compareTo(contractDate) > 0;
   if (newer) {
     if (!jsonOut) stdout.writeln('  ⚠ Migrations exist after contract date — contract may be stale.');
