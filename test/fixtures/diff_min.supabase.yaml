@@ -1,0 +1,23 @@
+contract:
+  name: diff_min_contract
+  version: "0.1.0"
+  date: "2026-06-04"
+
+project:
+  remote:
+    name: diff_min
+    ref: diffminref000000
+
+auth:
+  provider: supabase
+  planned_sign_in_methods:
+    - email
+
+data_model:
+  public:
+    things:
+      ownership: global
+      primary_key: id
+      fields:
+        id: uuid
+        name: text

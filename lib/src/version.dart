@@ -3,4 +3,4 @@
 /// traced back to the exact generator release.
 library;
 
-const String packageVersion = '0.2.0';
+const String packageVersion = '0.2.1';

@@ -12,6 +12,14 @@ class SchemaDiff {
 
   bool get isClean => entries.isEmpty;
 
+  /// Drift that should fail a build — anything above `info` severity.
+  /// Info-level entries (e.g. an enum in the DB no public table references) are
+  /// surfaced but never block: a noisy validator is a distrusted validator.
+  List<DiffEntry> get blocking =>
+      entries.where((e) => e.severity != DiffSeverity.info).toList();
+
+  bool get hasBlocking => blocking.isNotEmpty;
+
   String format() {
     if (entries.isEmpty) return 'OK: DB schema matches contract.';
     final b = StringBuffer();
@@ -19,7 +27,13 @@ class SchemaDiff {
       b.writeln('  ${e.severityIcon} ${e.message}');
     }
     b.writeln();
-    b.writeln('${entries.length} drift(s) detected.');
+    final blockingCount = blocking.length;
+    final infoCount = entries.length - blockingCount;
+    b.writeln(
+      blockingCount == 0
+          ? 'No blocking drift ($infoCount informational note(s)).'
+          : '$blockingCount blocking drift(s), $infoCount note(s).',
+    );
     return b.toString();
   }
 }

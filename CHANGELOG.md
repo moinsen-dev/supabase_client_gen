@@ -1,3 +1,11 @@
+## 0.2.1
+
+### Changed
+- `validate --mode=db` (and `--mode=all`) now exits non-zero only on **blocking**
+  drift (error/warning severity). Info-level notes — e.g. an enum that exists in
+  the database but no public table references — are still surfaced but no longer
+  fail the check. A noisy validator is a distrusted validator.
+
 ## 0.2.0
 
 Production-hardening release. **Generated output changes** — regenerate downstream

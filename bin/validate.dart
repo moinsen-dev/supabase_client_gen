@@ -84,13 +84,15 @@ String? _arg(List<String> args, String flag) {
 
 bool _checkDb(SupabaseContract contract, DbSchema db, bool jsonOut) {
   final diff = diffSchema(db, contract);
+  // Only error/warning severity fails the check; info-level notes never block.
   if (jsonOut) {
-    stdout.writeln('{"errors": ${!diff.isClean}}');
-    return !diff.isClean;
+    stdout.writeln(
+      '{"errors": ${diff.hasBlocking}, "notes": ${diff.entries.length - diff.blocking.length}}',
+    );
   } else {
     stdout.writeln(diff.format());
-    return !diff.isClean;
   }
+  return diff.hasBlocking;
 }
 
 bool _checkTypes(SupabaseContract contract, String outputDir, bool jsonOut,
