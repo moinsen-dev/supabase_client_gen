@@ -1,0 +1,94 @@
+import 'dart:io';
+
+import 'package:supabase_client_gen/src/contract_loader.dart';
+import 'package:test/test.dart';
+
+/// Writes [yaml] to a temp file and returns its path.
+String _tmp(String yaml) {
+  final f = File(
+    '${Directory.systemTemp.createTempSync('sclg_test_').path}/c.yaml',
+  )..writeAsStringSync(yaml);
+  return f.path;
+}
+
+const _validHeader = '''
+contract:
+  name: t
+  version: "0.1.0"
+  date: "2026-06-04"
+project:
+  remote:
+    name: t
+    ref: ref
+auth:
+  provider: supabase
+  planned_sign_in_methods: [email]
+data_model:
+  public:
+    things:
+      ownership: workspace
+      primary_key: id
+      fields:
+        id: uuid
+''';
+
+void main() {
+  group('loadContract friendly validation', () {
+    test('loads a valid contract', () {
+      final c = loadContract(_tmp(_validHeader));
+      expect(c.contract.name, 't');
+      expect(c.publicTables.keys, contains('things'));
+    });
+
+    test('missing file', () {
+      expect(
+        () => loadContract('/no/such/contract.yaml'),
+        throwsA(isA<ContractError>()
+            .having((e) => e.message, 'message', contains('not found'))),
+      );
+    });
+
+    test('rejects the flat project form with a helpful message', () {
+      final yaml = _validHeader.replaceFirst(
+        'project:\n  remote:\n    name: t\n    ref: ref',
+        'project:\n  name: t\n  organization: o\n  region: eu',
+      );
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>()
+            .having((e) => e.message, 'message', contains('project.remote'))),
+      );
+    });
+
+    test('reports the offending table path for a missing primary_key', () {
+      final yaml = _validHeader.replaceFirst('      primary_key: id\n', '');
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>().having((e) => e.message, 'message',
+            contains('data_model.public.things.primary_key'))),
+      );
+    });
+
+    test('reports missing required top-level section', () {
+      final yaml = _validHeader.replaceFirst(
+          'auth:\n  provider: supabase\n  planned_sign_in_methods: [email]\n',
+          '');
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>()
+            .having((e) => e.message, 'message', contains('auth'))),
+      );
+    });
+
+    test('tolerates a scalar runtime key under edge_functions', () {
+      final yaml = '$_validHeader'
+          'edge_functions:\n'
+          '  runtime: deno\n'
+          '  do_thing:\n'
+          '    method: POST\n';
+      final c = loadContract(_tmp(yaml));
+      expect(c.edgeFunctions!.keys, contains('do_thing'));
+      expect(c.edgeFunctions!.keys, isNot(contains('runtime')));
+    });
+  });
+}

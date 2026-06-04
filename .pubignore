@@ -1,0 +1,10 @@
+# Test goldens are generated fixtures that import supabase_flutter/equatable
+# (not deps of this package). They're needed in the repo for the golden tests
+# but should not ship to pub.dev.
+test/goldens/
+
+# Compile-check scratch package (its own Flutter pubspec).
+tool/compile_check/
+
+# Example generator output (regenerate with the CLI).
+example/generated/

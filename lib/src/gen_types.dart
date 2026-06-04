@@ -35,10 +35,10 @@ class GenTypes {
 
     // State machine: wait → inPublic → inScope('tables'|'views'|'functions'|'enums')
     var state = 'wait';
-    var scopeDepth = 0;       // depth when current scope started
-    var inSubBlock = false;   // inside Row/Insert/Update
+    var scopeDepth = 0; // depth when current scope started
+    var inSubBlock = false; // inside Row/Insert/Update
     var inRelationships = false;
-    var relDepth = 0;         // depth when Relationships started
+    var relDepth = 0; // depth when Relationships started
     String? currentTable;
 
     for (var i = 0; i < lines.length; i++) {
@@ -56,17 +56,40 @@ class GenTypes {
 
         case 'inPublic':
           // Enter a scope
-          if (_scopeMatch(trimmed, 'Tables'))  { state = 'tables';  scopeDepth = depth - 1; break; }
-          if (_scopeMatch(trimmed, 'Views'))   { state = 'views';   scopeDepth = depth - 1; break; }
-          if (_scopeMatch(trimmed, 'Functions')){ state = 'functions'; scopeDepth = depth - 1; break; }
-          if (_scopeMatch(trimmed, 'Enums'))   { state = 'enums';   scopeDepth = depth - 1; break; }
-          if (_scopeMatch(trimmed, 'CompositeTypes')) { state = 'enums'; scopeDepth = depth - 1; break; }
+          if (_scopeMatch(trimmed, 'Tables')) {
+            state = 'tables';
+            scopeDepth = depth - 1;
+            break;
+          }
+          if (_scopeMatch(trimmed, 'Views')) {
+            state = 'views';
+            scopeDepth = depth - 1;
+            break;
+          }
+          if (_scopeMatch(trimmed, 'Functions')) {
+            state = 'functions';
+            scopeDepth = depth - 1;
+            break;
+          }
+          if (_scopeMatch(trimmed, 'Enums')) {
+            state = 'enums';
+            scopeDepth = depth - 1;
+            break;
+          }
+          if (_scopeMatch(trimmed, 'CompositeTypes')) {
+            state = 'enums';
+            scopeDepth = depth - 1;
+            break;
+          }
           // Exit public
           if (depth <= scopeDepth) state = 'wait';
           break;
 
         case 'tables':
-          if (depth <= scopeDepth) { state = 'inPublic'; break; }
+          if (depth <= scopeDepth) {
+            state = 'inPublic';
+            break;
+          }
 
           // Relationships tracking
           if (inRelationships) {
@@ -75,7 +98,8 @@ class GenTypes {
           }
 
           // Enter sub-block
-          if (!inSubBlock && RegExp(r'^(Row|Insert|Update):').hasMatch(trimmed)) {
+          if (!inSubBlock &&
+              RegExp(r'^(Row|Insert|Update):').hasMatch(trimmed)) {
             inSubBlock = true;
             break;
           }
@@ -88,15 +112,24 @@ class GenTypes {
 
           // Table detection (only outside sub-blocks and relationships)
           if (!inSubBlock && !inRelationships) {
-            if (trimmed == 'Relationships: [' || trimmed.startsWith('Relationships:')) {
+            if (trimmed == 'Relationships: [' ||
+                trimmed.startsWith('Relationships:')) {
               inRelationships = true;
               relDepth = depth - 1; // depth after [ counted
               break;
             }
             final tableMatch = RegExp(r'^(\w+):').firstMatch(trimmed);
             if (tableMatch != null &&
-                !{'Row', 'Insert', 'Update', 'Relationships', 'Views', 'Functions',
-                  'Enums', 'CompositeTypes'}.contains(tableMatch.group(1))) {
+                !{
+                  'Row',
+                  'Insert',
+                  'Update',
+                  'Relationships',
+                  'Views',
+                  'Functions',
+                  'Enums',
+                  'CompositeTypes'
+                }.contains(tableMatch.group(1))) {
               final table = tableMatch.group(1)!;
               currentTable = table;
               tableNames.add(table);
@@ -110,7 +143,8 @@ class GenTypes {
           if (inSubBlock && currentTable != null) {
             final colMatch = RegExp(r'^(\w+)(\??):').firstMatch(trimmed);
             if (colMatch != null &&
-                !{'Row', 'Insert', 'Update', 'Relationships'}.contains(colMatch.group(1))) {
+                !{'Row', 'Insert', 'Update', 'Relationships'}
+                    .contains(colMatch.group(1))) {
               final colName = colMatch.group(1)!;
               final nullable = colMatch.group(2) == '?';
               tableColumns[currentTable]!.add(colName);
@@ -125,7 +159,10 @@ class GenTypes {
           break;
 
         case 'enums':
-          if (depth <= scopeDepth) { state = 'inPublic'; break; }
+          if (depth <= scopeDepth) {
+            state = 'inPublic';
+            break;
+          }
           final enumMatch = RegExp(r'^(\w+):').firstMatch(trimmed);
           if (enumMatch != null && enumMatch.group(1) != 'schema') {
             enumNames.add(enumMatch.group(1)!);
@@ -160,17 +197,35 @@ class MigrationCheck {
 
   factory MigrationCheck.check(String migrationsDir, String contractDate) {
     final dir = Directory(migrationsDir);
-    if (!dir.existsSync()) return MigrationCheck(latestMigration: null, contractDate: contractDate, migrationNewer: false);
+    if (!dir.existsSync()) {
+      return MigrationCheck(
+          latestMigration: null,
+          contractDate: contractDate,
+          migrationNewer: false);
+    }
 
-    final files = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.sql')).toList();
+    final files = dir
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.sql'))
+        .toList();
     files.sort((a, b) => b.path.compareTo(a.path));
     final latest = files.isNotEmpty ? files.first.path.split('/').last : null;
 
-    if (latest == null) return MigrationCheck(latestMigration: null, contractDate: contractDate, migrationNewer: false);
+    if (latest == null) {
+      return MigrationCheck(
+          latestMigration: null,
+          contractDate: contractDate,
+          migrationNewer: false);
+    }
 
     final migrationDate = latest.substring(0, 8);
-    final migrationNewer = migrationDate.compareTo(contractDate.replaceAll('-', '')) > 0;
+    final migrationNewer =
+        migrationDate.compareTo(contractDate.replaceAll('-', '')) > 0;
 
-    return MigrationCheck(latestMigration: latest, contractDate: contractDate, migrationNewer: migrationNewer);
+    return MigrationCheck(
+        latestMigration: latest,
+        contractDate: contractDate,
+        migrationNewer: migrationNewer);
   }
 }

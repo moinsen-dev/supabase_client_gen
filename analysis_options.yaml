@@ -1,0 +1,9 @@
+include: package:lints/recommended.yaml
+
+analyzer:
+  exclude:
+    # Generated golden fixtures — they target a consumer package (supabase_flutter
+    # + equatable) and are verified by the dedicated compile-check, not analysed
+    # as part of this package's source.
+    - test/goldens/**
+    - example/generated/**

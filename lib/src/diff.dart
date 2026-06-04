@@ -38,10 +38,10 @@ class DiffEntry {
   });
 
   String get severityIcon => switch (severity) {
-    DiffSeverity.error => '✗',
-    DiffSeverity.warning => '⚠',
-    DiffSeverity.info => 'ℹ',
-  };
+        DiffSeverity.error => '✗',
+        DiffSeverity.warning => '⚠',
+        DiffSeverity.info => 'ℹ',
+      };
 }
 
 enum DiffSeverity { error, warning, info }
@@ -132,8 +132,9 @@ SchemaDiff diffSchema(DbSchema db, SupabaseContract contract) {
         );
       }
 
-      // Nullable mismatch
-      final contractNullable = false; // contract doesn't track nullability yet
+      // Nullable mismatch — the contract tracks nullability via `nullable_fields`.
+      final contractNullable =
+          contractTable.nullableFields?.contains(fieldName) ?? false;
       if (!contractNullable && dbCol.isNullable) {
         entries.add(
           DiffEntry(
@@ -141,7 +142,17 @@ SchemaDiff diffSchema(DbSchema db, SupabaseContract contract) {
             table: tableName,
             column: dbCol.name,
             message:
-                "Column '$tableName.${dbCol.name}' is nullable in DB — contract should mark it as nullable",
+                "Column '$tableName.${dbCol.name}' is nullable in DB but not marked in contract.nullable_fields — run `generate --with-db --sync-nullability`",
+          ),
+        );
+      } else if (contractNullable && !dbCol.isNullable) {
+        entries.add(
+          DiffEntry(
+            severity: DiffSeverity.warning,
+            table: tableName,
+            column: dbCol.name,
+            message:
+                "Column '$tableName.${dbCol.name}' is marked nullable in contract but is NOT NULL in DB",
           ),
         );
       }

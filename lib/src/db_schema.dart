@@ -9,22 +9,53 @@ class DbSchema {
 
   const DbSchema({required this.tables, required this.enumValues});
 
+  /// Connects to Postgres and snapshots the public schema.
+  ///
+  /// Provide [url] (a `postgres://user:pass@host:port/db` connection string, or
+  /// the `SUPABASE_DB_URL` env value) to target any project. When [url] is null
+  /// the individual parameters / local-Supabase defaults are used.
   static Future<DbSchema> fetch({
+    String? url,
     String host = '127.0.0.1',
     int port = 56322,
     String database = 'postgres',
     String username = 'postgres',
     String password = 'postgres',
   }) async {
-    final conn = await Connection.open(
-      Endpoint(
+    final Endpoint endpoint;
+    final SslMode sslMode;
+    if (url != null && url.isNotEmpty) {
+      final uri = Uri.parse(url);
+      final userInfo = uri.userInfo.split(':');
+      endpoint = Endpoint(
+        host: uri.host,
+        port: uri.hasPort ? uri.port : 5432,
+        database:
+            uri.pathSegments.isNotEmpty ? uri.pathSegments.first : 'postgres',
+        username:
+            userInfo.isNotEmpty ? Uri.decodeComponent(userInfo[0]) : 'postgres',
+        password: userInfo.length > 1 ? Uri.decodeComponent(userInfo[1]) : '',
+      );
+      // Require SSL for non-local hosts, disable for localhost (local Supabase).
+      final isLocal = uri.host == '127.0.0.1' || uri.host == 'localhost';
+      final sslParam = uri.queryParameters['sslmode'];
+      sslMode = sslParam == 'disable' || (sslParam == null && isLocal)
+          ? SslMode.disable
+          : SslMode.require;
+    } else {
+      endpoint = Endpoint(
         host: host,
         port: port,
         database: database,
         username: username,
         password: password,
-      ),
-      settings: ConnectionSettings(sslMode: SslMode.disable),
+      );
+      sslMode = SslMode.disable;
+    }
+
+    final conn = await Connection.open(
+      endpoint,
+      settings: ConnectionSettings(sslMode: sslMode),
     );
 
     try {

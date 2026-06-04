@@ -38,17 +38,27 @@ class SupabaseContract {
           ? StorageConfig.fromYaml(yaml['storage'] as Map<String, dynamic>)
           : null,
       edgeFunctions: yaml['edge_functions'] != null
-          ? (yaml['edge_functions'] as Map<String, dynamic>).map(
-              (k, v) => MapEntry(
-                k,
-                EdgeFunctionConfig.fromYaml(v as Map<String, dynamic>),
-              ),
-            )
+          ? _parseEdgeFunctions(yaml['edge_functions'] as Map<String, dynamic>)
           : null,
       realtime: yaml['realtime'] != null
           ? RealtimeConfig.fromYaml(yaml['realtime'] as Map<String, dynamic>)
           : null,
     );
+  }
+
+  /// Parses edge-function entries, skipping non-mapping keys such as the
+  /// conventional `runtime:` scalar that lives alongside the function configs.
+  static Map<String, EdgeFunctionConfig> _parseEdgeFunctions(
+    Map<String, dynamic> yaml,
+  ) {
+    final result = <String, EdgeFunctionConfig>{};
+    for (final entry in yaml.entries) {
+      if (entry.value is! Map) continue;
+      result[entry.key] = EdgeFunctionConfig.fromYaml(
+        (entry.value as Map).cast<String, dynamic>(),
+      );
+    }
+    return result;
   }
 
   static Map<String, RoleConfig> _parseRoles(Map<String, dynamic>? yaml) {
@@ -102,10 +112,10 @@ class ContractMeta {
     required this.date,
   });
   factory ContractMeta.fromYaml(Map<String, dynamic> yaml) => ContractMeta(
-    name: yaml['name'] as String,
-    version: yaml['version'] as String,
-    date: yaml['date'] as String,
-  );
+        name: yaml['name'] as String,
+        version: yaml['version'] as String,
+        date: yaml['date'] as String,
+      );
 }
 
 class ProjectMeta {
@@ -126,9 +136,9 @@ class AuthConfig {
   final List<String> signInMethods;
   const AuthConfig({required this.provider, required this.signInMethods});
   factory AuthConfig.fromYaml(Map<String, dynamic> yaml) => AuthConfig(
-    provider: yaml['provider'] as String,
-    signInMethods: (yaml['planned_sign_in_methods'] as List).cast<String>(),
-  );
+        provider: yaml['provider'] as String,
+        signInMethods: (yaml['planned_sign_in_methods'] as List).cast<String>(),
+      );
 }
 
 class RoleConfig {
@@ -143,9 +153,9 @@ class SchemaConfig {
   final String purpose;
   const SchemaConfig({required this.exposedToDataApi, required this.purpose});
   factory SchemaConfig.fromYaml(Map<String, dynamic> yaml) => SchemaConfig(
-    exposedToDataApi: yaml['exposed_to_data_api'] as bool,
-    purpose: yaml['purpose'] as String,
-  );
+        exposedToDataApi: yaml['exposed_to_data_api'] as bool,
+        purpose: yaml['purpose'] as String,
+      );
 }
 
 class TableConfig {
@@ -170,29 +180,29 @@ class TableConfig {
   });
 
   factory TableConfig.fromYaml(Map<String, dynamic> yaml) => TableConfig(
-    ownership: yaml['ownership'] as String,
-    primaryKey: yaml['primary_key'] as String,
-    fields: (yaml['fields'] as Map<String, dynamic>).map(
-      (k, v) => MapEntry(k, v as String),
-    ),
-    enumValues: yaml['enum_values'] != null
-        ? (yaml['enum_values'] as Map<String, dynamic>).map(
-            (k, v) => MapEntry(k, (v as List).cast<String>()),
-          )
-        : null,
-    clientAccess: yaml['client_access'] != null
-        ? (yaml['client_access'] as Map<String, dynamic>).map(
-            (k, v) => MapEntry(k, v as String),
-          )
-        : null,
-    unique: yaml['unique'] != null
-        ? (yaml['unique'] as List).cast<String>()
-        : null,
-    nullableFields: yaml['nullable_fields'] != null
-        ? (yaml['nullable_fields'] as List).cast<String>()
-        : null,
-    description: yaml['description'] as String?,
-  );
+        ownership: yaml['ownership'] as String,
+        primaryKey: yaml['primary_key'] as String,
+        fields: (yaml['fields'] as Map<String, dynamic>).map(
+          (k, v) => MapEntry(k, v as String),
+        ),
+        enumValues: yaml['enum_values'] != null
+            ? (yaml['enum_values'] as Map<String, dynamic>).map(
+                (k, v) => MapEntry(k, (v as List).cast<String>()),
+              )
+            : null,
+        clientAccess: yaml['client_access'] != null
+            ? (yaml['client_access'] as Map<String, dynamic>).map(
+                (k, v) => MapEntry(k, v as String),
+              )
+            : null,
+        unique: yaml['unique'] != null
+            ? (yaml['unique'] as List).cast<String>()
+            : null,
+        nullableFields: yaml['nullable_fields'] != null
+            ? (yaml['nullable_fields'] as List).cast<String>()
+            : null,
+        description: yaml['description'] as String?,
+      );
 
   bool isEnumField(String fieldName) {
     if (enumValues == null) return false;
@@ -216,8 +226,9 @@ class TableConfig {
     if (pgType == 'date') return 'DateTime';
     if (pgType == 'jsonb' || pgType == 'json') return 'Map<String, dynamic>';
     if (pgType.startsWith('vector')) return 'List<double>';
-    if (enumValues != null && enumValues!.containsKey(pgType))
+    if (enumValues != null && enumValues!.containsKey(pgType)) {
       return _toPascalCase(pgType);
+    }
     return 'String';
   }
 
@@ -249,11 +260,11 @@ class StorageBucket {
     this.fileSizeLimitMb,
   });
   factory StorageBucket.fromYaml(Map<String, dynamic> yaml) => StorageBucket(
-    public: yaml['public'] as bool? ?? false,
-    allowedMimeTypes:
-        (yaml['allowed_mime_types'] as List?)?.cast<String>() ?? [],
-    fileSizeLimitMb: yaml['file_size_limit_mb'] as int?,
-  );
+        public: yaml['public'] as bool? ?? false,
+        allowedMimeTypes:
+            (yaml['allowed_mime_types'] as List?)?.cast<String>() ?? [],
+        fileSizeLimitMb: yaml['file_size_limit_mb'] as int?,
+      );
 }
 
 class EdgeFunctionConfig {

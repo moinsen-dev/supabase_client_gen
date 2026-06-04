@@ -1,27 +1,38 @@
 /// Generator CLI: reads a supabase.yaml contract and produces Dart client code.
 ///
 /// Usage:
-///   dart run tool/generate.dart --contract docs/contracts/supabase.yaml --output lib/generated
-///   dart run tool/generate.dart --contract docs/contracts/supabase.yaml --output lib/generated --with-db
-///   dart run tool/generate.dart --contract docs/contracts/supabase.yaml --output lib/generated --check
+///   dart run supabase_client_gen:generate --contract <path> --output <dir>
+///   dart run supabase_client_gen:generate --contract <path> --output <dir> --check
+///   dart run supabase_client_gen:generate --contract <path> --output <dir> --with-db --sync-nullability
 library;
 
 import 'dart:io';
 
-import 'package:yaml/yaml.dart';
-
 import 'package:supabase_client_gen/src/contract.dart';
+import 'package:supabase_client_gen/src/contract_loader.dart';
 import 'package:supabase_client_gen/src/db_schema.dart';
-import 'package:supabase_client_gen/src/generator.dart';
+import 'package:supabase_client_gen/src/nullability_sync.dart';
+import 'package:supabase_client_gen/src/render.dart';
+import 'package:supabase_client_gen/src/version.dart';
 
 Future<void> main(List<String> args) async {
+  if (args.contains('--version')) {
+    stdout.writeln('supabase_client_gen $packageVersion');
+    return;
+  }
   final checkMode = args.contains('--check');
   final withDb = args.contains('--with-db');
+  final syncNullability = args.contains('--sync-nullability');
   final contractPath = _arg(args, '--contract');
   final outputDir = _arg(args, '--output');
+  final dbUrl =
+      _arg(args, '--db-url') ?? Platform.environment['SUPABASE_DB_URL'];
 
   if (contractPath == null || outputDir == null) {
-    stderr.writeln('Usage: dart run tool/generate.dart --contract <path> --output <dir> [--check] [--with-db]');
+    stderr.writeln(
+      'Usage: generate --contract <path> --output <dir> [--check] '
+      '[--with-db] [--sync-nullability] [--db-url <url>]',
+    );
     exit(1);
   }
 
@@ -30,71 +41,70 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
 
-  final yamlContent = File(contractPath).readAsStringSync();
-  final yaml = _yamlToJson(loadYaml(yamlContent)) as Map<String, dynamic>;
-  final contract = SupabaseContract.fromYaml(yaml);
-
-  // Optionally snapshot the DB for nullability detection.
-  DbSchema? dbSchema;
-  if (withDb) {
+  // Optionally materialise live-DB nullability into the contract before
+  // generating, so generated output stays deterministic but DB-accurate.
+  if (syncNullability) {
+    if (!withDb) {
+      stderr.writeln('Error: --sync-nullability requires --with-db.');
+      exit(1);
+    }
     try {
-      dbSchema = await DbSchema.fetch();
+      final dbSchema = await DbSchema.fetch(url: dbUrl);
+      final changed = syncNullabilityIntoContract(contractPath, dbSchema);
       stdout.writeln(
-        '  DB snapshot: ${dbSchema.tables.length} tables, ${dbSchema.enumValues.length} enums',
+        changed == 0
+            ? '  Nullability already in sync with DB.'
+            : '  Synced nullability for $changed field(s) into $contractPath',
       );
     } catch (e) {
-      stdout.writeln('  DB not available, using contract-only nullability: $e');
+      stderr.writeln('Error: --sync-nullability failed: $e');
+      exit(1);
     }
+  } else if (withDb) {
+    stdout.writeln(
+      '  Note: --with-db no longer affects generation (output is contract-only '
+      'and deterministic). Use --sync-nullability to fold DB nullability into '
+      'the contract, or `validate --with-db` to detect drift.',
+    );
   }
 
-  final generator = ClientGenerator(contract, dbSchema: dbSchema);
-  final files = generator.generate();
-
-  // Write generated files to a temp dir, format them, then compare.
-  final tempDir = Directory.systemTemp.createTempSync('supabase_client_gen_');
+  final SupabaseContract contract;
   try {
-    for (final entry in files.entries) {
-      final filePath = '${tempDir.path}/${entry.key}';
-      final file = File(filePath);
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(entry.value);
-    }
+    contract = loadContract(contractPath);
+  } on ContractError catch (e) {
+    stderr.writeln('Contract error: $e');
+    exit(1);
+  }
 
-    Process.runSync('dart', ['format', tempDir.path], runInShell: true);
+  final Map<String, String> files;
+  try {
+    files = renderFormatted(contract);
+  } on StateError catch (e) {
+    stderr.writeln(e.message);
+    exit(1);
+  }
 
-    if (checkMode) {
-      var dirty = false;
-      for (final entry in files.entries) {
-        final tempFile = File('${tempDir.path}/${entry.key}');
-        final genContent = tempFile.readAsStringSync();
-        final diskFile = File('$outputDir/${entry.key}');
-        if (!diskFile.existsSync()) {
-          stderr.writeln('Missing: ${entry.key}');
-          dirty = true;
-        } else if (diskFile.readAsStringSync() != genContent) {
-          stderr.writeln('Out of date: ${entry.key}');
-          dirty = true;
-        }
+  if (checkMode) {
+    final outcome = checkAgainst(files, outputDir);
+    if (!outcome.isClean) {
+      for (final f in outcome.missing) {
+        stderr.writeln('Missing: $f');
       }
-      if (dirty) {
-        stderr.writeln('\nGenerated code out of sync. Run the generator without --check to update.');
-        exit(1);
+      for (final f in outcome.outOfDate) {
+        stderr.writeln('Out of date: $f');
       }
-      stdout.writeln('OK: Generated code matches contract.');
-      exit(0);
+      stderr.writeln(
+        '\nGenerated code out of sync. Run the generator without --check to update.',
+      );
+      exit(1);
     }
+    stdout.writeln('OK: Generated code matches contract.');
+    exit(0);
+  }
 
-    // Not check mode: copy formatted files to output.
-    for (final entry in files.entries) {
-      final tempFile = File('${tempDir.path}/${entry.key}');
-      final destPath = '$outputDir/${entry.key}';
-      final destFile = File(destPath);
-      destFile.parent.createSync(recursive: true);
-      tempFile.copySync(destPath);
-      stdout.writeln('  Wrote: ${entry.key}');
-    }
-  } finally {
-    tempDir.deleteSync(recursive: true);
+  writeOutput(files, outputDir);
+  for (final key in files.keys) {
+    stdout.writeln('  Wrote: $key');
   }
 }
 
@@ -102,14 +112,4 @@ String? _arg(List<String> args, String flag) {
   final i = args.indexOf(flag);
   if (i >= 0 && i + 1 < args.length) return args[i + 1];
   return null;
-}
-
-dynamic _yamlToJson(dynamic node) {
-  if (node is YamlMap) {
-    return Map<String, dynamic>.fromEntries(
-      node.entries.map((e) => MapEntry(e.key.toString(), _yamlToJson(e.value))),
-    );
-  }
-  if (node is YamlList) return node.map(_yamlToJson).toList();
-  return node;
 }

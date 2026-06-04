@@ -8,7 +8,10 @@
 library supabase_client_gen;
 
 export 'src/contract.dart';
+export 'src/contract_loader.dart';
 export 'src/generator.dart';
+export 'src/render.dart';
 export 'src/db_schema.dart';
+export 'src/nullability_sync.dart';
 export 'src/diff.dart';
 export 'src/gen_types.dart';

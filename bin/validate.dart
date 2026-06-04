@@ -6,12 +6,12 @@
 library;
 
 import 'dart:io';
-import 'package:yaml/yaml.dart';
 import 'package:supabase_client_gen/src/contract.dart';
+import 'package:supabase_client_gen/src/contract_loader.dart';
 import 'package:supabase_client_gen/src/db_schema.dart';
 import 'package:supabase_client_gen/src/diff.dart';
 import 'package:supabase_client_gen/src/gen_types.dart';
-import 'package:supabase_client_gen/src/generator.dart';
+import 'package:supabase_client_gen/src/render.dart';
 
 Future<void> main(List<String> args) async {
   final mode = _arg(args, '--mode') ?? 'all';
@@ -21,21 +21,29 @@ Future<void> main(List<String> args) async {
   final outputDir = _arg(args, '--output');
   final tsPath = _arg(args, '--ts');
   final migrationsDir = _arg(args, '--migrations');
+  final dbUrl =
+      _arg(args, '--db-url') ?? Platform.environment['SUPABASE_DB_URL'];
 
   if (contractPath == null || outputDir == null) {
-    stderr.writeln('Usage: validate --contract <path> --output <dir> [--ts <path>] [--migrations <dir>] [--mode=<mode>] [--with-db] [--json]');
+    stderr.writeln(
+        'Usage: validate --contract <path> --output <dir> [--ts <path>] [--migrations <dir>] [--mode=<mode>] [--with-db] [--db-url <url>] [--json]');
     exit(1);
   }
 
-  final yaml = _yamlToJson(loadYaml(File(contractPath).readAsStringSync())) as Map<String, dynamic>;
-  final contract = SupabaseContract.fromYaml(yaml);
+  final SupabaseContract contract;
+  try {
+    contract = loadContract(contractPath);
+  } on ContractError catch (e) {
+    stderr.writeln('Contract error: $e');
+    exit(1);
+  }
 
   var hasErrors = false;
   DbSchema? dbSchema;
 
   if (withDb || mode == 'db' || mode == 'all') {
     try {
-      dbSchema = await DbSchema.fetch();
+      dbSchema = await DbSchema.fetch(url: dbUrl);
     } catch (e) {
       if (!jsonOut) stderr.writeln('DB unavailable: $e');
       if (mode == 'db') exit(1);
@@ -85,38 +93,36 @@ bool _checkDb(SupabaseContract contract, DbSchema db, bool jsonOut) {
   }
 }
 
-bool _checkTypes(SupabaseContract contract, String outputDir, bool jsonOut, DbSchema? dbSchema) {
-  final generator = ClientGenerator(contract, dbSchema: dbSchema);
-  final files = generator.generate();
-
-  final tempDir = Directory.systemTemp.createTempSync('supabase_client_gen_validate_');
-  var dirty = false;
+bool _checkTypes(SupabaseContract contract, String outputDir, bool jsonOut,
+    DbSchema? dbSchema) {
+  final Map<String, String> files;
   try {
-    for (final entry in files.entries) {
-      final fp = '${tempDir.path}/${entry.key}';
-      final f = File(fp)..parent.createSync(recursive: true);
-      f.writeAsStringSync(entry.value);
-    }
-    Process.runSync('dart', ['format', tempDir.path], runInShell: true);
-
-    for (final entry in files.entries) {
-      final genContent = File('${tempDir.path}/${entry.key}').readAsStringSync();
-      final file = File('$outputDir/${entry.key}');
-      if (!file.existsSync() || file.readAsStringSync() != genContent) {
-        if (!jsonOut) stdout.writeln('  ✗ ${entry.key}: out of date');
-        dirty = true;
-      }
-    }
-  } finally {
-    tempDir.deleteSync(recursive: true);
+    files = renderFormatted(contract);
+  } on StateError catch (e) {
+    if (!jsonOut) stdout.writeln('  ✗ ${e.message}');
+    return true;
   }
-  if (!dirty && !jsonOut) stdout.writeln('  OK: Generated code matches contract.');
-  return dirty;
+  final outcome = checkAgainst(files, outputDir);
+  if (!jsonOut) {
+    for (final f in outcome.missing) {
+      stdout.writeln('  ✗ $f: missing');
+    }
+    for (final f in outcome.outOfDate) {
+      stdout.writeln('  ✗ $f: out of date');
+    }
+    if (outcome.isClean) {
+      stdout.writeln('  OK: Generated code matches contract.');
+    }
+  }
+  return !outcome.isClean;
 }
 
 bool _checkGenTypes(SupabaseContract contract, String tsPath, bool jsonOut) {
   if (!File(tsPath).existsSync()) {
-    if (!jsonOut) stdout.writeln('  ⚠ supabase.types.ts not found. Run: supabase gen types --local');
+    if (!jsonOut) {
+      stdout.writeln(
+          '  ⚠ supabase.types.ts not found. Run: supabase gen types --local');
+    }
     return false;
   }
 
@@ -126,11 +132,17 @@ bool _checkGenTypes(SupabaseContract contract, String tsPath, bool jsonOut) {
   var issues = 0;
 
   for (final t in genTypes.tableNames.difference(contractTables)) {
-    if (!jsonOut) stdout.writeln('  ✗ Table public.$t in supabase.types.ts but not in contract');
+    if (!jsonOut) {
+      stdout.writeln(
+          '  ✗ Table public.$t in supabase.types.ts but not in contract');
+    }
     issues++;
   }
   for (final t in contractTables.difference(genTypes.tableNames)) {
-    if (!jsonOut) stdout.writeln('  ✗ Table public.$t in contract but not in supabase.types.ts');
+    if (!jsonOut) {
+      stdout.writeln(
+          '  ✗ Table public.$t in contract but not in supabase.types.ts');
+    }
     issues++;
   }
 
@@ -138,11 +150,17 @@ bool _checkGenTypes(SupabaseContract contract, String tsPath, bool jsonOut) {
     final contractCols = contract.publicTables[t]!.fields.keys.toSet();
     final genCols = genTypes.tableColumns[t] ?? {};
     for (final c in genCols.difference(contractCols)) {
-      if (!jsonOut) stdout.writeln('  ✗ Column $t.$c in supabase.types.ts but not in contract');
+      if (!jsonOut) {
+        stdout.writeln(
+            '  ✗ Column $t.$c in supabase.types.ts but not in contract');
+      }
       issues++;
     }
     for (final c in contractCols.difference(genCols)) {
-      if (!jsonOut) stdout.writeln('  ✗ Column $t.$c in contract but not in supabase.types.ts');
+      if (!jsonOut) {
+        stdout.writeln(
+            '  ✗ Column $t.$c in contract but not in supabase.types.ts');
+      }
       issues++;
     }
   }
@@ -153,24 +171,35 @@ bool _checkGenTypes(SupabaseContract contract, String tsPath, bool jsonOut) {
     if (table.enumValues != null) contractEnums.addAll(table.enumValues!.keys);
   }
   for (final e in genTypes.enumNames.difference(contractEnums)) {
-    if (!jsonOut) stdout.writeln('  ℹ Enum $e in supabase.types.ts but not in contract');
+    if (!jsonOut) {
+      stdout.writeln('  ℹ Enum $e in supabase.types.ts but not in contract');
+    }
   }
   for (final e in contractEnums.difference(genTypes.enumNames)) {
-    if (!jsonOut) stdout.writeln('  ✗ Enum $e in contract but not in supabase.types.ts');
+    if (!jsonOut) {
+      stdout.writeln('  ✗ Enum $e in contract but not in supabase.types.ts');
+    }
     issues++;
   }
 
-  if (issues == 0 && !jsonOut) stdout.writeln('  OK: Contract matches supabase.types.ts.');
+  if (issues == 0 && !jsonOut) {
+    stdout.writeln('  OK: Contract matches supabase.types.ts.');
+  }
   return issues > 0;
 }
 
-bool _checkMigrations(SupabaseContract contract, String migrationsDir, bool jsonOut) {
+bool _checkMigrations(
+    SupabaseContract contract, String migrationsDir, bool jsonOut) {
   final dir = Directory(migrationsDir);
   if (!dir.existsSync()) {
     if (!jsonOut) stdout.writeln('  ⚠ Migrations directory not found.');
     return false;
   }
-  final files = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.sql')).toList();
+  final files = dir
+      .listSync()
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.sql'))
+      .toList();
   files.sort((a, b) => b.path.compareTo(a.path));
   final latest = files.isNotEmpty ? files.first.path.split('/').last : null;
   if (latest == null) {
@@ -181,17 +210,12 @@ bool _checkMigrations(SupabaseContract contract, String migrationsDir, bool json
   final contractDate = contract.contract.date.replaceAll('-', '');
   final newer = migrationDate.compareTo(contractDate) > 0;
   if (newer) {
-    if (!jsonOut) stdout.writeln('  ⚠ Migrations exist after contract date — contract may be stale.');
+    if (!jsonOut) {
+      stdout.writeln(
+          '  ⚠ Migrations exist after contract date — contract may be stale.');
+    }
   } else {
     if (!jsonOut) stdout.writeln('  OK: No migrations newer than contract.');
   }
   return newer;
-}
-
-dynamic _yamlToJson(dynamic node) {
-  if (node is YamlMap) {
-    return Map<String, dynamic>.fromEntries(node.entries.map((e) => MapEntry(e.key.toString(), _yamlToJson(e.value))));
-  }
-  if (node is YamlList) return node.map(_yamlToJson).toList();
-  return node;
 }

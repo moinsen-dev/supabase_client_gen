@@ -4,3 +4,9 @@ pubspec.lock
 build/
 .dart_tool/
 package_config.json
+
+# compile-check scratch output
+tool/compile_check/lib/generated/
+tool/compile_check/.dart_tool/
+tool/compile_check/pubspec.lock
+example/generated/

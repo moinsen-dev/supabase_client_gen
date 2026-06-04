@@ -1,0 +1,152 @@
+contract:
+  name: edge_cases_contract
+  version: "0.1.0"
+  date: "2026-06-04"
+
+project:
+  remote:
+    name: edge_cases
+    ref: edgecasesref0000
+
+auth:
+  provider: supabase
+  planned_sign_in_methods:
+    - email
+
+schemas:
+  public:
+    exposed_to_data_api: true
+    purpose: Client-facing tables
+
+data_model:
+  public:
+    # Non-`id` primary key — exercises the primary_key fix.
+    widgets:
+      ownership: workspace
+      primary_key: widget_id
+      description: Widget with a non-id primary key.
+      fields:
+        widget_id: uuid
+        workspace_id: uuid
+        label: text
+        status: widget_status
+        weight: numeric
+        active: boolean
+      nullable_fields:
+        - label
+      enum_values:
+        widget_status:
+          - new
+          - active
+          - retired
+      client_access:
+        select: member_of_workspace
+        insert: member_of_workspace
+        update: member_of_workspace
+        delete: member_of_workspace
+
+    # Global table with no tenant scope — realtime stream must be unscoped.
+    announcements:
+      ownership: global
+      primary_key: id
+      description: System-wide announcements, not workspace scoped.
+      fields:
+        id: uuid
+        title: text
+        body: text
+        published_at: timestamptz
+      client_access:
+        select: authenticated
+        insert: edge_function_only
+        update: edge_function_only
+        delete: edge_function_only
+
+    # `_ies` -> `y` singularization (categories -> Category).
+    categories:
+      ownership: workspace
+      primary_key: id
+      fields:
+        id: uuid
+        workspace_id: uuid
+        name: text
+      client_access:
+        select: member_of_workspace
+        insert: member_of_workspace
+        update: member_of_workspace
+        delete: member_of_workspace
+
+    # All-nullable optional table.
+    drafts:
+      ownership: workspace
+      primary_key: id
+      fields:
+        id: uuid
+        workspace_id: uuid
+        note: text
+        payload: jsonb
+        embedding: vector(3)
+      nullable_fields:
+        - note
+        - payload
+        - embedding
+      client_access:
+        select: member_of_workspace
+        insert: member_of_workspace
+        update: member_of_workspace
+        delete: member_of_workspace
+
+    # Fully read-only table — no repository should be generated.
+    audit_log:
+      ownership: global
+      primary_key: id
+      fields:
+        id: uuid
+        action: text
+        created_at: timestamptz
+      client_access:
+        select: authenticated
+        insert: edge_function_only
+        update: edge_function_only
+        delete: edge_function_only
+
+storage:
+  buckets:
+    avatars:
+      public: true
+      allowed_mime_types:
+        - image/png
+        - image/jpeg
+      file_size_limit_mb: 5
+    documents:
+      public: false
+      allowed_mime_types:
+        - application/pdf
+      file_size_limit_mb: 25
+
+edge_functions:
+  runtime: deno
+  resolve_widget:
+    method: POST
+    description: Resolve a widget from a label.
+    required_request_fields:
+      - label
+    optional_request_fields:
+      - workspace_id
+  publish_announcement:
+    method: POST
+    description: Publish an announcement.
+    required_request_fields:
+      - title
+      - body
+
+realtime:
+  publication:
+    allowed_tables:
+      - public.widgets
+      - public.announcements
+    replica_identity_full:
+      - public.widgets
+  events:
+    widget_changed:
+      source: public.widgets
+      audience: workspace_members

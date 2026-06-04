@@ -1,0 +1,100 @@
+# Example supabase_client_gen contract.
+#
+# Generate a typed Dart client from this file:
+#   dart pub global run supabase_client_gen:generate \
+#     --contract example/supabase.yaml --output example/generated
+#
+# This is the single source of truth for your backend's client surface.
+
+contract:
+  name: example_supabase_contract
+  version: "0.1.0"
+  date: "2026-06-04"
+
+# Connection details live under `project.remote` (name + ref are required).
+project:
+  remote:
+    name: example
+    ref: exampleprojectref
+
+auth:
+  provider: supabase
+  planned_sign_in_methods:
+    - email
+
+schemas:
+  public:
+    exposed_to_data_api: true
+    purpose: Client-facing tables
+
+data_model:
+  public:
+    # A workspace-scoped table: because it has a `workspace_id` column, the
+    # generated repository's select()/stream() are scoped by workspaceId.
+    things:
+      ownership: workspace
+      primary_key: id
+      description: Items a user tracks within a workspace.
+      fields:
+        id: uuid
+        workspace_id: uuid
+        name: text
+        category: thing_category
+        notes: text
+        created_at: timestamptz
+      nullable_fields:
+        - notes
+      enum_values:
+        thing_category:
+          - device
+          - document
+          - other
+      client_access:
+        select: member_of_workspace
+        insert: member_of_workspace
+        update: member_of_workspace
+        delete: member_of_workspace
+
+    # A global, realtime, read-only table: gets a repository with an unscoped
+    # select() and stream(), but no insert/update/delete (server-managed).
+    announcements:
+      ownership: global
+      primary_key: id
+      fields:
+        id: uuid
+        title: text
+        body: text
+        published_at: timestamptz
+      client_access:
+        select: authenticated
+        insert: edge_function_only
+        update: edge_function_only
+        delete: edge_function_only
+
+storage:
+  buckets:
+    avatars:
+      public: true
+      allowed_mime_types:
+        - image/png
+        - image/jpeg
+      file_size_limit_mb: 5
+
+edge_functions:
+  runtime: deno
+  resolve_thing:
+    method: POST
+    description: Resolve a thing from a free-text query.
+    required_request_fields:
+      - query
+    optional_request_fields:
+      - workspace_id
+
+realtime:
+  publication:
+    allowed_tables:
+      - public.announcements
+  events:
+    announcement_published:
+      source: public.announcements
+      audience: authenticated
