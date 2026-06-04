@@ -5,7 +5,11 @@ YAML file, then generate a complete typed Dart client — models, enums,
 repositories, and edge function clients.
 
 ```bash
-dart run supabase_client_gen:generate \
+# Install globally:
+dart pub global activate supabase_client_gen
+
+# Generate from any project:
+dart pub global run supabase_client_gen:generate \
   --contract docs/contracts/supabase.yaml \
   --output lib/generated
 ```
@@ -18,6 +22,19 @@ subscriptions manually. This tool reads a single contract file — your
 backend's source of truth — and produces all the Dart code you need.
 
 **One contract. One command. Zero drift.**
+
+## Installation
+
+```bash
+dart pub global activate supabase_client_gen
+```
+
+Or add to `pubspec.yaml`:
+
+```yaml
+dev_dependencies:
+  supabase_client_gen: ^0.1.0
+```
 
 ## What Gets Generated
 
@@ -166,7 +183,7 @@ realtime:
 ### generate
 
 ```bash
-dart run supabase_client_gen:generate \
+dart pub global run supabase_client_gen:generate \
   --contract <path> \       # Path to supabase.yaml
   --output <dir> \          # Output directory for generated code
   [--with-db] \             # Connect to live DB for nullability detection
@@ -176,7 +193,7 @@ dart run supabase_client_gen:generate \
 ### validate
 
 ```bash
-dart run supabase_client_gen:validate \
+dart pub global run supabase_client_gen:validate \
   --contract <path> \       # Path to supabase.yaml
   --output <dir> \          # Generated code directory
   [--ts <path>] \           # Path to supabase.types.ts
@@ -198,12 +215,12 @@ Four validation checks:
 # melos.yaml
 scripts:
   gen:client:
-    run: dart run supabase_client_gen:generate \
+    run: dart pub global run supabase_client_gen:generate \
       --contract ../../docs/contracts/supabase.yaml \
       --output lib/generated --with-db
 
   validate:all:
-    run: dart run supabase_client_gen:validate \
+    run: dart pub global run supabase_client_gen:validate \
       --contract ../../docs/contracts/supabase.yaml \
       --output lib/generated \
       --ts ../../docs/generated/supabase.types.ts \
@@ -217,7 +234,7 @@ scripts:
 import 'package:supabase_client_gen/supabase_client_gen.dart';
 import 'package:yaml/yaml.dart';
 
-void main() {
+void main() async {
   final yaml = loadYaml(File('supabase.yaml').readAsStringSync());
   final contract = SupabaseContract.fromYaml(yaml as Map<String, dynamic>);
 
