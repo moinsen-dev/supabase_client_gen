@@ -1,0 +1,16 @@
+name: supabase_client_gen
+description: Contract-driven code generator for Supabase projects. Reads a supabase.yaml contract and produces typed Dart client code (models, enums, repositories, edge function clients).
+version: 0.1.0
+repository: https://github.com/moinsen-dev/supabase_client_gen
+publish_to: none
+
+environment:
+  sdk: ^3.3.0
+
+dependencies:
+  yaml: ^3.1.0
+  postgres: ^3.0.0
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.24.0
