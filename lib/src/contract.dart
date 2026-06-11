@@ -226,6 +226,7 @@ class TableConfig {
     if (pgType == 'date') return 'DateTime';
     if (pgType == 'jsonb' || pgType == 'json') return 'Map<String, dynamic>';
     if (pgType.startsWith('vector')) return 'List<double>';
+    if (pgType == 'text[]' || pgType == '_text') return 'List<String>';
     if (enumValues != null && enumValues!.containsKey(pgType)) {
       return _toPascalCase(pgType);
     }

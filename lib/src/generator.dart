@@ -162,6 +162,11 @@ class ClientGenerator {
           ? "$key as List<double>?"
           : "($key as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? []";
     }
+    if (dt == 'List<String>') {
+      return nullable
+          ? "($key as List<dynamic>?)?.cast<String>()"
+          : "($key as List<dynamic>?)?.cast<String>() ?? const []";
+    }
     if (table.isEnumField(fieldName)) {
       final enumName = _pascal(table.fields[fieldName]!);
       return nullable
@@ -265,7 +270,11 @@ class ClientGenerator {
     if (hasRealtime) b.writeln('// Realtime: enabled');
     b.writeln();
     b.writeln("import 'dart:async';");
-    b.writeln("import 'package:supabase_flutter/supabase_flutter.dart';");
+    // `show` keeps generated table models (e.g. Session, User) from clashing
+    // with the gotrue types of the same name re-exported by supabase_flutter.
+    b.writeln(
+      "import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;",
+    );
     b.writeln("import '../models/$tableName.dart';");
     b.writeln();
     b.writeln('class ${className}Repository {');
@@ -657,7 +666,7 @@ class ClientGenerator {
   }
 
   String _pascal(String s) => s
-      .split('_')
+      .split(RegExp(r'[_-]'))
       .where((w) => w.isNotEmpty)
       .map((w) => w[0].toUpperCase() + w.substring(1))
       .join();
