@@ -721,6 +721,226 @@ table.matrix td.table-name {
   color: var(--text-dim);
 }
 
+/* ----- Drift view (doctor report) ----- */
+
+.drift-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: baseline;
+}
+
+.drift-dot-error {
+  background: var(--red);
+  box-shadow: 0 0 6px rgba(240, 106, 106, 0.6);
+}
+
+.drift-dot-warn {
+  background: var(--amber);
+  box-shadow: 0 0 6px rgba(245, 176, 86, 0.6);
+}
+
+.drift-dot-ok {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(62, 207, 142, 0.6);
+}
+
+.drift-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 28px;
+}
+
+.drift-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+}
+
+.drift-count-num {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.drift-count-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.drift-count.drift-error {
+  color: var(--red);
+  background: var(--red-dim);
+  border-color: rgba(240, 106, 106, 0.28);
+}
+
+.drift-count.drift-warn {
+  color: var(--amber);
+  background: var(--amber-dim);
+  border-color: rgba(245, 176, 86, 0.3);
+}
+
+.drift-count.drift-info {
+  color: var(--blue);
+  background: var(--blue-dim);
+  border-color: rgba(94, 158, 255, 0.3);
+}
+
+.drift-count.is-zero {
+  color: var(--text-faint);
+  background: var(--bg-panel);
+  border-color: var(--border);
+}
+
+.drift-count.drift-ok {
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-color: rgba(62, 207, 142, 0.35);
+}
+
+.drift-source {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
+.drift-chip-error {
+  color: var(--red);
+  background: var(--red-dim);
+  border-color: rgba(240, 106, 106, 0.28);
+}
+
+.drift-chip-warn {
+  color: var(--amber);
+  background: var(--amber-dim);
+  border-color: rgba(245, 176, 86, 0.3);
+}
+
+.drift-chip-info {
+  color: var(--blue);
+  background: var(--blue-dim);
+  border-color: rgba(94, 158, 255, 0.3);
+}
+
+.drift-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drift-finding {
+  border-left-width: 3px;
+}
+
+.drift-border-error {
+  border-left-color: var(--red);
+}
+
+.drift-border-warn {
+  border-left-color: var(--amber);
+}
+
+.drift-border-info {
+  border-left-color: var(--blue);
+}
+
+.drift-finding-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.drift-code {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  letter-spacing: 0.04em;
+}
+
+.drift-path {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+
+.drift-message {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.drift-fix {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.drift-fix-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(62, 207, 142, 0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.drift-empty {
+  text-align: left;
+  max-width: 640px;
+}
+
+.drift-cmd {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Drift dot on schema graph nodes ("Ampel auf dem Graphen") */
+
+.tnode-drift {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tnode-drift-error {
+  background: var(--red);
+  box-shadow: 0 0 7px rgba(240, 106, 106, 0.7);
+}
+
+.tnode-drift-warn {
+  background: var(--amber);
+  box-shadow: 0 0 7px rgba(245, 176, 86, 0.7);
+}
+
 /* React Flow chrome tweaks */
 
 .schema-graph-root .react-flow__controls {

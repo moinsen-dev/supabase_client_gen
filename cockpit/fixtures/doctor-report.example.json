@@ -1,0 +1,44 @@
+[
+  {
+    "code": "DR106",
+    "severity": "error",
+    "path": "data_model.public.things",
+    "message": "Table 'public.things' is client-facing per the contract but has row-level security DISABLED in the database.",
+    "fix": "ALTER TABLE public.things ENABLE ROW LEVEL SECURITY; and add policies matching client_access."
+  },
+  {
+    "code": "DR102",
+    "severity": "error",
+    "path": "rpc_functions.get_thing_stats",
+    "message": "RPC function 'get_thing_stats' is declared in the contract but does not exist in the database — calls will fail at runtime.",
+    "fix": "Create the function via a migration, or remove it from the contract."
+  },
+  {
+    "code": "DR003",
+    "severity": "warn",
+    "path": "data_model.public.things_overview.client_access",
+    "message": "View 'things_overview' declares update access, but views cannot be written through PostgREST in this setup.",
+    "fix": "Remove the mutation entries from client_access — only select applies to views."
+  },
+  {
+    "code": "DR007",
+    "severity": "warn",
+    "path": "storage.buckets.avatars",
+    "message": "Bucket 'avatars' is public — every object is readable (and enumerable) by anyone with the URL.",
+    "fix": "Confirm nothing sensitive lands here, or set public: false and serve via signed URLs."
+  },
+  {
+    "code": "DR006",
+    "severity": "info",
+    "path": "rpc_functions.get_thing_stats",
+    "message": "RPC function 'get_thing_stats' has no description.",
+    "fix": "Add description: — the contract is documentation; agents and humans both read it."
+  },
+  {
+    "code": "DR105",
+    "severity": "info",
+    "path": "data_model.public",
+    "message": "DB table 'public.audit_log' is not declared in the contract.",
+    "fix": "Intentional (server-only table)? Fine. Otherwise draft it with init --from-db."
+  }
+]

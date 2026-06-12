@@ -1,10 +1,11 @@
 ---
 import '../styles/global.css';
 import { loadCockpit } from '../lib/contract';
+import { loadDoctorReport } from '../lib/doctor';
 
 interface Props {
   title: string;
-  active: 'schema' | 'security' | 'functions' | 'realtime';
+  active: 'schema' | 'security' | 'functions' | 'realtime' | 'drift';
   /** Full-bleed pages (the graph) skip the .page wrapper. */
   fullBleed?: boolean;
 }
@@ -12,6 +13,14 @@ interface Props {
 const { title, active, fullBleed = false } = Astro.props;
 const c = loadCockpit();
 const functionsCount = c.edgeFunctions.length + c.rpcFunctions.length;
+const report = loadDoctorReport();
+const driftDot = report
+  ? report.counts.error > 0
+    ? 'error'
+    : report.counts.warn > 0
+      ? 'warn'
+      : 'ok'
+  : null;
 
 const base = import.meta.env.BASE_URL.endsWith('/')
   ? import.meta.env.BASE_URL
@@ -26,6 +35,12 @@ const tabs = [
     href: `${base}realtime/`,
     label: 'Realtime & Storage',
     count: c.realtimeTables.length + c.buckets.length,
+  },
+  {
+    id: 'drift',
+    href: `${base}drift/`,
+    label: 'Drift',
+    count: report ? report.findings.length : null,
   },
 ] as const;
 ---
@@ -64,6 +79,7 @@ const tabs = [
       {
         tabs.map((t) => (
           <a href={t.href} class={t.id === active ? 'active' : ''}>
+            {t.id === 'drift' && driftDot && <span class={`drift-dot drift-dot-${driftDot}`} />}
             {t.label}
             {t.count != null && <span class="count">{t.count}</span>}
           </a>

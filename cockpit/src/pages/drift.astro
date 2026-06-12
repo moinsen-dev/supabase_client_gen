@@ -1,0 +1,96 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { loadDoctorReport, SEVERITY_ORDER, type DoctorSeverity } from '../lib/doctor';
+
+const report = loadDoctorReport();
+
+const severityMeta: Record<DoctorSeverity, { label: string; hint: string }> = {
+  error: { label: 'error', hint: 'breaks clients or violates the contract' },
+  warn: { label: 'warn', hint: 'security smell or contract gap — review' },
+  info: { label: 'info', hint: 'informational, no action required' },
+};
+
+const inSync =
+  report != null &&
+  report.counts.error === 0 &&
+  report.counts.warn === 0 &&
+  report.counts.info === 0;
+
+const groups = report
+  ? SEVERITY_ORDER.map((sev) => ({
+      severity: sev,
+      findings: report.findings.filter((f) => f.severity === sev),
+    })).filter((g) => g.findings.length > 0)
+  : [];
+---
+
+<Layout title="Drift" active="drift">
+  <h1>Drift</h1>
+  <p class="lede">
+    Findings from <code>doctor</code> — contract lint rules (DR0xx) and, when run with
+    <code>--db-url</code>, real drift between the contract and the live database (DR1xx).
+  </p>
+
+  {
+    report === null ? (
+      <div class="empty-note drift-empty">
+        <p style="margin:0 0 10px"><strong style="color:var(--text)">No doctor report.</strong></p>
+        <p style="margin:0 0 14px">
+          Generate one and rebuild the cockpit with <code>DOCTOR_REPORT</code> set:
+        </p>
+        <pre
+          class="drift-cmd"><code>dart run supabase_client_gen:doctor --contract supabase.yaml --json &gt; report.json
+DOCTOR_REPORT=report.json CONTRACT=supabase.yaml npm run build</code></pre>
+        <p style="margin:14px 0 0">
+          Add <code>--db-url &lt;postgres-url&gt;</code> to also check the live database for drift.
+        </p>
+      </div>
+    ) : (
+      <>
+        <div class="drift-summary">
+          {SEVERITY_ORDER.map((sev) => (
+            <div class={`drift-count drift-${sev}${report.counts[sev] === 0 ? ' is-zero' : ''}`}>
+              <span class="drift-count-num">{report.counts[sev]}</span>
+              <span class="drift-count-label">{severityMeta[sev].label}</span>
+            </div>
+          ))}
+          {inSync && (
+            <div class="drift-count drift-ok">
+              <span class="drift-count-num">✓</span>
+              <span class="drift-count-label">Contract and database in sync</span>
+            </div>
+          )}
+          <span class="drift-source mono">report: {report.source}</span>
+        </div>
+
+        {groups.map((g) => (
+          <section>
+            <h2 class="section-h">
+              <span class={`access-chip drift-chip-${g.severity}`}>{severityMeta[g.severity].label}</span>
+              <span style="color:var(--text-dim);font-weight:400;font-size:12.5px">
+                {severityMeta[g.severity].hint}
+              </span>
+            </h2>
+            <div class="drift-list">
+              {g.findings.map((f) => (
+                <div class={`card drift-finding drift-border-${f.severity}`}>
+                  <div class="drift-finding-head">
+                    <span class={`drift-code drift-chip-${f.severity}`}>{f.code}</span>
+                    <code class="drift-path">{f.path}</code>
+                  </div>
+                  <p class="drift-message">{f.message}</p>
+                  {f.fix && (
+                    <p class="drift-fix">
+                      <span class="drift-fix-label">fix</span>
+                      {f.fix}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </>
+    )
+  }
+</Layout>

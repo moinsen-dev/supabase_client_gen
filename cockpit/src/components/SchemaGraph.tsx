@@ -39,17 +39,26 @@ function nodeHeight(table: TableInfo): number {
 // Table node
 // ---------------------------------------------------------------------------
 
-type TableNodeData = { table: TableInfo; selected: boolean };
+/** Drift status from the doctor report: worst finding severity per table. */
+export type DriftStatus = 'error' | 'warn';
+
+type TableNodeData = { table: TableInfo; selected: boolean; drift: DriftStatus | null };
 type TableFlowNode = Node<TableNodeData, 'table'>;
 
 function TableNode({ data }: NodeProps<TableFlowNode>) {
-  const { table, selected } = data;
+  const { table, selected, drift } = data;
   const isView = table.kind === 'view';
   return (
     <div className={`tnode${selected ? ' tnode-selected' : ''}`}>
       <Handle type="target" position={Position.Left} className="tnode-handle" />
       <Handle type="source" position={Position.Right} className="tnode-handle" />
       <div className="tnode-header">
+        {drift && (
+          <span
+            className={`tnode-drift tnode-drift-${drift}`}
+            title={`doctor: ${drift === 'error' ? 'error' : 'warning'} finding on this table — see Drift tab`}
+          />
+        )}
         <span className="tnode-name">{table.name}</span>
         {isView && <span className="tnode-badge">VIEW</span>}
         {table.ownership && <span className="tnode-ownership">{table.ownership}</span>}
@@ -76,7 +85,11 @@ const nodeTypes: NodeTypes = { table: TableNode };
 // Layout
 // ---------------------------------------------------------------------------
 
-function layout(tables: TableInfo[], refs: DerivedRef[]): { nodes: TableFlowNode[]; edges: Edge[] } {
+function layout(
+  tables: TableInfo[],
+  refs: DerivedRef[],
+  tableStatus: Record<string, DriftStatus>,
+): { nodes: TableFlowNode[]; edges: Edge[] } {
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: 'LR', nodesep: 48, ranksep: 110, marginx: 24, marginy: 24 });
   g.setDefaultEdgeLabel(() => ({}));
@@ -95,7 +108,7 @@ function layout(tables: TableInfo[], refs: DerivedRef[]): { nodes: TableFlowNode
       id: t.name,
       type: 'table',
       position: { x: pos.x - NODE_WIDTH / 2, y: pos.y - nodeHeight(t) / 2 },
-      data: { table: t, selected: false },
+      data: { table: t, selected: false, drift: tableStatus[t.name] ?? null },
     };
   });
 
@@ -212,12 +225,15 @@ function DetailPanel({ table, onClose }: { table: TableInfo; onClose: () => void
 export default function SchemaGraph({
   tables,
   refs,
+  tableStatus = {},
 }: {
   tables: TableInfo[];
   refs: DerivedRef[];
+  /** Table name → worst doctor finding severity (the drift traffic light). */
+  tableStatus?: Record<string, DriftStatus>;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const base = useMemo(() => layout(tables, refs), [tables, refs]);
+  const base = useMemo(() => layout(tables, refs, tableStatus), [tables, refs, tableStatus]);
 
   const nodes = useMemo(
     () =>
