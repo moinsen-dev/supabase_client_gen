@@ -15,3 +15,5 @@ export 'src/db_schema.dart';
 export 'src/nullability_sync.dart';
 export 'src/diff.dart';
 export 'src/gen_types.dart';
+export 'src/contract_init.dart';
+export 'src/doctor.dart';

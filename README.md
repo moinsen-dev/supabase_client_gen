@@ -37,7 +37,7 @@ Or add as a dev dependency:
 
 ```yaml
 dev_dependencies:
-  supabase_client_gen: ^0.2.0
+  supabase_client_gen: ^0.4.0
 ```
 
 ### Runtime dependencies in the consuming app
@@ -82,6 +82,79 @@ dart pub global run supabase_client_gen:generate \
 `--sync-nullability` reads live column nullability and updates `nullable_fields`
 in the contract (preserving comments/formatting). Generation then reads from the
 contract as usual. Use `validate --with-db` to *detect* drift without writing.
+
+## Brownfield Import: `init --from-db`
+
+Already have a Supabase project? Don't write the contract by hand — introspect
+it (the `prisma db pull` of this tool):
+
+```bash
+# From a live database:
+dart pub global run supabase_client_gen:init \
+  --from-db --db-url "$SUPABASE_DB_URL" \
+  --output supabase.yaml --name my_project
+
+# Offline, from a `supabase gen types` file:
+dart pub global run supabase_client_gen:init \
+  --from-gen-types supabase.types.ts \
+  --output supabase.yaml --name my_project
+```
+
+`--from-db` reads tables, columns, types, nullability, primary keys (composite
+keys become the list form), views (`kind: view`), enums, public-schema
+functions (→ `rpc_functions` with args, `optional_args` from `DEFAULT`s, and a
+conservative `returns` mapping), the realtime publication, and storage buckets.
+
+`--from-gen-types` works without any database access but is lossy: field types
+are approximated from TypeScript (`uuid` and `timestamptz` both surface as
+`string` → `text`), functions are name-only, and storage/realtime are not
+recoverable.
+
+The result is a **draft, not a finished contract**: every place a human must
+decide carries a `# TODO review` marker — `client_access` defaults to
+`select: authenticated` with `edge_function_only` writes, `ownership` is
+guessed from the presence of a `workspace_id` column, and descriptions are
+left to you. The draft is self-tested before it is written (it must pass the
+contract loader and the generator), and output is deterministic: entries are
+sorted alphabetically (enum values keep their semantic Postgres order), so
+running init twice yields an identical file.
+
+## Doctor: Best-Practice Linter
+
+```bash
+dart pub global run supabase_client_gen:doctor \
+  --contract supabase.yaml [--db-url "$SUPABASE_DB_URL"] [--json] [--strict]
+```
+
+Contract-only rules (no database needed):
+
+| Code | Severity | Finding |
+|---|---|---|
+| DR001 | error | Table declares no `primary_key` |
+| DR002 | warn | No `client_access` declared — access model undocumented |
+| DR003 | warn | Mutation access declared on a `kind: view` entry |
+| DR004 | warn | `enum_values` entry not used by any field of the table |
+| DR005 | info | Edge function without `description` |
+| DR006 | info | RPC function without `description` |
+| DR007 | warn | Public storage bucket |
+| DR008 | error | Realtime event sources a table missing from the publication |
+| DR009 | error | `primary_key` column not declared in `fields` |
+
+With `--db-url`, doctor additionally compares against the live database:
+
+| Code | Severity | Finding |
+|---|---|---|
+| DR101 | warn | DB function not declared in the contract (unmanaged RPC) |
+| DR102 | error | Contract RPC does not exist in the DB |
+| DR103 | warn | SECURITY DEFINER function without pinned `search_path` |
+| DR104 | warn | View without `security_invoker` (runs with owner privileges) |
+| DR105 | info | DB table not covered by the contract (`init --from-db` drafts it) |
+| DR106 | error | RLS disabled on a contract-covered table |
+
+Every finding carries a path and a concrete fix. `--json` emits a
+machine-readable array (`{code, severity, path, message, fix}`) for CI and
+dashboards. Exit code is 0 when clean or info-only and 1 on errors;
+`--strict` also fails on warnings.
 
 ## The Contract Format
 
@@ -186,6 +259,26 @@ Malformed contracts fail with a path-qualified message
 | Custom enum | Named Dart enum |
 
 ## CLI Reference
+
+### init
+
+```bash
+dart pub global run supabase_client_gen:init \
+  (--from-db --db-url <url> | --from-gen-types <file.ts>) \
+  [--output <path>] \        # Target contract path (default: supabase.yaml)
+  [--name <project>] \       # Project name used in the draft (default: my_project)
+  [--force]                  # Overwrite an existing contract file
+```
+
+### doctor
+
+```bash
+dart pub global run supabase_client_gen:doctor \
+  --contract <path> \
+  [--db-url <url>] \         # Also run the DB rules (DR1xx)
+  [--json] \                 # Machine-readable findings for CI
+  [--strict]                 # Exit 1 on warnings too (default: errors only)
+```
 
 ### generate
 

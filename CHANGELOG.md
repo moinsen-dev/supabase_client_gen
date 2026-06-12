@@ -1,3 +1,35 @@
+## 0.4.0
+
+### Added
+- **`init` CLI — brownfield import.** Draft a contract from an existing
+  backend: `init --from-db --db-url <url>` introspects tables, columns, types,
+  nullability, primary keys (composite → list form), views (`kind: view`),
+  enums, public-schema functions (→ `rpc_functions` with `optional_args` from
+  `DEFAULT`s and a conservative `returns` mapping), the realtime publication,
+  and storage buckets. `init --from-gen-types <file.ts>` is the offline
+  variant over a `supabase gen types` file (lossy: types approximated,
+  functions name-only, no storage/realtime). Every human decision carries a
+  `# TODO review` marker; the draft is self-tested against the loader and
+  generator before writing; output is deterministically sorted so two runs
+  produce an identical file.
+- **`doctor` CLI — best-practice linter.** Contract-only rules DR001–DR009
+  (missing primary key, missing `client_access`, mutations on views, unused
+  `enum_values`, missing descriptions, public buckets, events outside the
+  realtime publication, primary-key column not in `fields`) run without a
+  database. With `--db-url`, rules DR101–DR106 compare against the live DB:
+  unmanaged DB functions, contract RPCs missing in the DB, SECURITY DEFINER
+  functions without pinned `search_path`, views without `security_invoker`,
+  uncovered DB tables, and RLS disabled on contract tables. `--json` emits
+  `{code, severity, path, message, fix}` for CI; exit 1 on errors
+  (`--strict` also on warnings).
+- `loadContractFromString` in the public API — parse and validate a contract
+  from a YAML string (backs the init self-test).
+- DB introspection (`DbSchema.fetch`) now also snapshots views, primary keys,
+  callable public-schema functions, the realtime publication, storage
+  buckets, RLS flags, and view `security_invoker` options.
+- Gen-types parsing now captures Row column types, view columns, and enum
+  values (additive; existing fields unchanged).
+
 ## 0.3.0
 
 ### Added
