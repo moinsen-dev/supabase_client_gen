@@ -1,5 +1,7 @@
 # supabase_client_gen
 
+**Landing & live demo:** https://supabase-client-gen.moinsen.dev (demo: the real MercyNight backend contract in the Contract Cockpit)
+
 Contract-driven code generator for Supabase. Define your backend in a single
 YAML file, then generate a complete typed Dart client — models, enums,
 repositories, edge function clients, and storage bucket clients.
