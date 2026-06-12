@@ -24,7 +24,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      session_queue_overview: {
+        Row: {
+          id: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_song_to_player_queue: {
@@ -76,6 +82,13 @@ void main() {
     expect(genTypes.enumNames, contains('mood'));
   });
 
+  test('collects view names from the Views scope, not as tables', () {
+    expect(genTypes.viewNames, equals({'session_queue_overview'}));
+    expect(genTypes.tableNames, isNot(contains('session_queue_overview')));
+    // Row members of a view are not mistaken for views.
+    expect(genTypes.viewNames, isNot(contains('id')));
+  });
+
   test('a types file without functions yields an empty set', () {
     final none = GenTypes.parse('''
 export type Database = {
@@ -94,6 +107,7 @@ export type Database = {
 }
 ''');
     expect(none.functionNames, isEmpty);
+    expect(none.viewNames, isEmpty);
     expect(none.tableNames, equals({'things'}));
   });
 }

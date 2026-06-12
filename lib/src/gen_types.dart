@@ -13,12 +13,17 @@ class GenTypes {
   /// truth that contract-declared `rpc_functions` are checked against.
   final Set<String> functionNames;
 
+  /// Names of views in the `public.Views` scope — the DB-side truth that
+  /// contract entries declared `kind: view` are checked against.
+  final Set<String> viewNames;
+
   const GenTypes({
     required this.tableNames,
     required this.tableColumns,
     required this.columnNullability,
     required this.enumNames,
     this.functionNames = const {},
+    this.viewNames = const {},
   });
 
   factory GenTypes.parse(String ts) {
@@ -27,6 +32,7 @@ class GenTypes {
     final columnNullability = <String, Map<String, bool>>{};
     final enumNames = <String>{};
     final functionNames = <String>{};
+    final viewNames = <String>{};
 
     final lines = ts.split('\n');
 
@@ -161,7 +167,16 @@ class GenTypes {
           break;
 
         case 'views':
-          if (depth <= scopeDepth) state = 'inPublic';
+          if (depth <= scopeDepth) {
+            state = 'inPublic';
+            break;
+          }
+          // View names sit directly under the Views scope; their Row members
+          // live one level deeper.
+          if (depthBefore == scopeDepth + 1) {
+            final viewMatch = RegExp(r'^(\w+)\??:').firstMatch(trimmed);
+            if (viewMatch != null) viewNames.add(viewMatch.group(1)!);
+          }
           break;
 
         case 'functions':
@@ -196,6 +211,7 @@ class GenTypes {
       columnNullability: columnNullability,
       enumNames: enumNames,
       functionNames: functionNames,
+      viewNames: viewNames,
     );
   }
 

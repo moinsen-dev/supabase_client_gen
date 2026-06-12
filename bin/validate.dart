@@ -130,7 +130,16 @@ bool _checkGenTypes(SupabaseContract contract, String tsPath, bool jsonOut) {
 
   final ts = File(tsPath).readAsStringSync();
   final genTypes = GenTypes.parse(ts);
-  final contractTables = contract.publicTables.keys.toSet();
+  // Contract entries split by kind: tables live in the gen-types Tables
+  // scope, views in the Views scope.
+  final contractTables = contract.publicTables.entries
+      .where((e) => !e.value.isView)
+      .map((e) => e.key)
+      .toSet();
+  final contractViews = contract.publicTables.entries
+      .where((e) => e.value.isView)
+      .map((e) => e.key)
+      .toSet();
   var issues = 0;
 
   for (final t in genTypes.tableNames.difference(contractTables)) {
@@ -146,6 +155,22 @@ bool _checkGenTypes(SupabaseContract contract, String tsPath, bool jsonOut) {
           '  ✗ Table public.$t in contract but not in supabase.types.ts');
     }
     issues++;
+  }
+
+  // Views declared in the contract must exist as views in the database.
+  // (Column-level comparison is not possible: gen-types view rows are not
+  // parsed.) A view missing in the DB is blocking drift.
+  for (final v in contractViews.difference(genTypes.viewNames)) {
+    if (!jsonOut) {
+      stdout.writeln(
+          '  ✗ View public.$v in contract but not in supabase.types.ts');
+    }
+    issues++;
+  }
+  for (final v in genTypes.viewNames.difference(contractViews)) {
+    if (!jsonOut) {
+      stdout.writeln('  ℹ View $v in supabase.types.ts but not in contract');
+    }
   }
 
   for (final t in contractTables.intersection(genTypes.tableNames)) {
