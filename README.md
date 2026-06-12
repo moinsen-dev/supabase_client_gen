@@ -466,7 +466,9 @@ dots on affected tables in the schema graph. Pass the generated
 **Docs** view that renders the Markdown projection, with a "Copy as
 Markdown" button for handing the contract to an AI or a colleague.
 
-See [`cockpit/README.md`](cockpit/README.md) for details.
+See [`cockpit/README.md`](cockpit/README.md) for details. The product
+landing page in [`landing/`](landing/) embeds the cockpit as a live demo
+under `/demo/` — `npm run build:full` produces one deployable static folder.
 
 ## License
 

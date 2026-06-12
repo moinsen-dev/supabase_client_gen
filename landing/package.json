@@ -1,0 +1,17 @@
+{
+  "name": "supabase-client-gen-landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Product landing page for supabase_client_gen, with the Contract Cockpit embedded as a live demo under /demo/",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "build:demo": "bash scripts/build-demo.sh",
+    "build:full": "astro build && bash scripts/build-demo.sh",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.7.0"
+  }
+}
