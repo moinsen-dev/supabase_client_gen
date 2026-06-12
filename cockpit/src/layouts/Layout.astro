@@ -5,7 +5,7 @@ import { loadDoctorReport } from '../lib/doctor';
 
 interface Props {
   title: string;
-  active: 'schema' | 'security' | 'functions' | 'realtime' | 'drift';
+  active: 'schema' | 'security' | 'functions' | 'realtime' | 'drift' | 'docs';
   /** Full-bleed pages (the graph) skip the .page wrapper. */
   fullBleed?: boolean;
 }
@@ -42,6 +42,7 @@ const tabs = [
     label: 'Drift',
     count: report ? report.findings.length : null,
   },
+  { id: 'docs', href: `${base}docs/`, label: 'Docs', count: null },
 ] as const;
 ---
 

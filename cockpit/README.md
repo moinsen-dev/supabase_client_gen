@@ -21,6 +21,7 @@ backend — visible at a glance.
 | **Functions** | Edge functions (method, description, request fields) and — if the contract declares them — Postgres RPC functions (args, returns). |
 | **Realtime & Storage** | Tables in the realtime publication, declared realtime events, and storage buckets (visibility, MIME types, size limits). |
 | **Drift** | Traffic light over a `doctor --json` report: error/warn/info counters (green check when in sync), findings grouped by severity with code, path, message, and fix. Tables with findings get a red/yellow status dot on the schema graph. Optional — without a report the tab shows how to generate one. |
+| **Docs** | The generator's `CONTRACT.md` Markdown projection, rendered. A "Copy as Markdown" button copies the raw Markdown — the fastest way to hand the contract to an AI or a colleague. Optional — without `CONTRACT_MD` the tab shows the generate command. |
 
 ## Quickstart
 
@@ -82,6 +83,21 @@ You get:
 `DOCTOR_REPORT` is optional: without it the Drift tab shows an empty state
 with the exact command line to generate a report. A sample report for the
 example contract lives at `fixtures/doctor-report.example.json`.
+
+## Docs workflow (`CONTRACT_MD`)
+
+The **Docs** view renders the `CONTRACT.md` that `generate` writes into the
+output directory. The cockpit never re-derives the Markdown — one emitter,
+no duplication. Pass the generated file via `CONTRACT_MD` (resolved like
+`CONTRACT`, relative to `cockpit/`):
+
+```bash
+dart run supabase_client_gen:generate --contract supabase.yaml --output lib/generated
+CONTRACT_MD=lib/generated/CONTRACT.md CONTRACT=supabase.yaml npm run build
+```
+
+`CONTRACT_MD` is optional: without it the Docs tab shows an empty state with
+the exact generate command.
 
 ## How references are derived
 

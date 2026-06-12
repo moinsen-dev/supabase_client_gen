@@ -461,7 +461,10 @@ CONTRACT=../example/supabase.yaml npm run build   # → cockpit/dist/
 
 Pass a `doctor --json` report via `DOCTOR_REPORT=report.json` to add a fifth
 **Drift** view — a traffic light over the findings, with red/yellow status
-dots on affected tables in the schema graph.
+dots on affected tables in the schema graph. Pass the generated
+`CONTRACT.md` via `CONTRACT_MD=lib/generated/CONTRACT.md` to add a sixth
+**Docs** view that renders the Markdown projection, with a "Copy as
+Markdown" button for handing the contract to an AI or a colleague.
 
 See [`cockpit/README.md`](cockpit/README.md) for details.
 

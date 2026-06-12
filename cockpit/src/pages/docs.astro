@@ -1,0 +1,49 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { loadContractMd } from '../lib/contractMd';
+import { marked } from 'marked';
+
+const md = loadContractMd();
+const html = md ? await marked.parse(md.markdown, { gfm: true }) : null;
+---
+
+<Layout title="Docs" active="docs">
+  <h1>Docs</h1>
+  <p class="lede">
+    The generator's Markdown projection of the contract — <code>CONTRACT.md</code>,
+    written by <code>generate</code> next to the Dart client. One emitter, no duplication.
+  </p>
+
+  {
+    md === null || html === null ? (
+      <div class="empty-note docs-empty">
+        <p style="margin:0 0 10px"><strong style="color:var(--text)">No CONTRACT.md.</strong></p>
+        <p style="margin:0 0 14px">
+          Generate it and rebuild the cockpit with <code>CONTRACT_MD</code> set:
+        </p>
+        <pre
+          class="drift-cmd"><code>dart run supabase_client_gen:generate --contract supabase.yaml --output lib/generated
+CONTRACT_MD=lib/generated/CONTRACT.md CONTRACT=supabase.yaml npm run build</code></pre>
+      </div>
+    ) : (
+      <>
+        <div class="docs-toolbar">
+          <button id="copy-md" class="docs-copy" type="button">Copy as Markdown</button>
+          <span class="drift-source mono">source: {md.source}</span>
+        </div>
+        <article class="card docs-body" set:html={html} />
+        <script define:vars={{ rawMarkdown: md.markdown }}>
+          const button = document.getElementById('copy-md');
+          button?.addEventListener('click', async () => {
+            await navigator.clipboard.writeText(rawMarkdown);
+            const label = button.textContent;
+            button.textContent = 'Copied ✓';
+            setTimeout(() => {
+              button.textContent = label;
+            }, 1500);
+          });
+        </script>
+      </>
+    )
+  }
+</Layout>
