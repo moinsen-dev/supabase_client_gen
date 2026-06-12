@@ -5,7 +5,7 @@
 // Realtime: enabled
 
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 import '../models/tickets.dart';
 
 class TicketRepository {

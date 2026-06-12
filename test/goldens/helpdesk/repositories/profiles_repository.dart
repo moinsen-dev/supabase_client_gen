@@ -4,7 +4,7 @@
 // Access: select=own_profile insert=own_profile update=own_profile delete=edge_function_only
 
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 import '../models/profiles.dart';
 
 class ProfileRepository {

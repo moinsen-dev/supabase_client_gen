@@ -4,7 +4,7 @@
 // Access: select=member_of_workspace insert=owner update=owner delete=owner
 
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 import '../models/workspace_members.dart';
 
 class WorkspaceMemberRepository {

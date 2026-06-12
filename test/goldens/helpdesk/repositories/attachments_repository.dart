@@ -4,7 +4,7 @@
 // Access: select=member_of_workspace insert=member_of_workspace update=edge_function_only delete=member_of_workspace
 
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 import '../models/attachments.dart';
 
 class AttachmentRepository {
