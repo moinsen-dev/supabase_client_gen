@@ -439,6 +439,10 @@ cd cockpit && npm install
 CONTRACT=../example/supabase.yaml npm run build   # → cockpit/dist/
 ```
 
+Pass a `doctor --json` report via `DOCTOR_REPORT=report.json` to add a fifth
+**Drift** view — a traffic light over the findings, with red/yellow status
+dots on affected tables in the schema graph.
+
 See [`cockpit/README.md`](cockpit/README.md) for details.
 
 ## License
