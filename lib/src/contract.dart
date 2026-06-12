@@ -3,6 +3,11 @@ library;
 
 class SupabaseContract {
   final ContractMeta contract;
+
+  /// Optional top-level free-text `summary:` (Markdown). Carried 1:1 into the
+  /// generated `CONTRACT.md` — the place where a human or an AI maintains
+  /// meaning-context that the structured sections cannot express.
+  final String? summary;
   final ProjectMeta project;
   final AuthConfig auth;
   final Map<String, RoleConfig> roles;
@@ -15,6 +20,7 @@ class SupabaseContract {
 
   const SupabaseContract({
     required this.contract,
+    this.summary,
     required this.project,
     required this.auth,
     required this.roles,
@@ -29,6 +35,7 @@ class SupabaseContract {
   factory SupabaseContract.fromYaml(Map<String, dynamic> yaml) {
     return SupabaseContract(
       contract: ContractMeta.fromYaml(yaml['contract'] as Map<String, dynamic>),
+      summary: yaml['summary'] as String?,
       project: ProjectMeta.fromYaml(yaml['project'] as Map<String, dynamic>),
       auth: AuthConfig.fromYaml(yaml['auth'] as Map<String, dynamic>),
       roles: _parseRoles(yaml['roles'] as Map<String, dynamic>?),

@@ -11,6 +11,13 @@ contract:
   version: "0.1.0"
   date: "2026-06-04"
 
+# Optional free-text summary (Markdown). Carried 1:1 into the generated
+# CONTRACT.md — the place for meaning-context the structured sections
+# cannot express.
+summary: |
+  Example backend: workspace-scoped **things** with notes and categories,
+  global announcements, and an avatar bucket.
+
 # Connection details live under `project.remote` (name + ref are required).
 project:
   remote:

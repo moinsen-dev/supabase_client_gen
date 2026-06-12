@@ -1,6 +1,20 @@
 ## 0.4.0
 
 ### Added
+- **`CONTRACT.md` Markdown projection.** Every `generate` run additionally
+  writes a compact, deterministic data dictionary into the output directory:
+  tables (fields, nullability, `PK`/enum notes, declared `client_access`),
+  RPC and edge function signatures, realtime and storage — order follows the
+  contract, no timestamps, byte-identical across machines. Covered by the
+  golden suite and by `generate --check` like every other generated file.
+- **Top-level `summary:` contract field** (optional, Markdown string) —
+  carried 1:1 into `CONTRACT.md`. The place where a human or an AI maintains
+  the meaning context the structured sections cannot express.
+- **Cockpit "Docs" view** — a sixth tab that renders the generator-produced
+  `CONTRACT.md` (pass it via `CONTRACT_MD=path/to/CONTRACT.md` at build time;
+  without it the tab shows the generate command). Includes a "Copy as
+  Markdown" button that copies the raw Markdown — the fastest way to hand the
+  contract to an AI or a colleague.
 - **`init` CLI — brownfield import.** Draft a contract from an existing
   backend: `init --from-db --db-url <url>` introspects tables, columns, types,
   nullability, primary keys (composite → list form), views (`kind: view`),

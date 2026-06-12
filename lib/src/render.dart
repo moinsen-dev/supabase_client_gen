@@ -11,6 +11,7 @@ import 'dart:io';
 
 import 'contract.dart';
 import 'generator.dart';
+import 'markdown_emitter.dart';
 
 /// Generates the client code for [contract] and runs `dart format` over it.
 ///
@@ -47,6 +48,10 @@ Map<String, String> renderFormatted(SupabaseContract contract) {
       formatted[entry.key] =
           File('${tempDir.path}/${entry.key}').readAsStringSync();
     }
+    // The Markdown projection rides the same pipeline so that goldens,
+    // --check and validate all cover it. It is not Dart, so it joins after
+    // the format step.
+    formatted['CONTRACT.md'] = emitContractMarkdown(contract);
     return formatted;
   } finally {
     tempDir.deleteSync(recursive: true);

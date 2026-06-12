@@ -70,6 +70,12 @@ void _validate(Map<String, dynamic> root) {
     _requireString(contract, key, 'contract.$key');
   }
 
+  final summary = root['summary'];
+  if (summary != null && summary is! String) {
+    throw ContractError(
+        "'summary' must be a free-text string (Markdown) when present.");
+  }
+
   _requireMap(root, 'project');
   final project = root['project'] as Map<String, dynamic>;
   if (project['remote'] is! Map) {
