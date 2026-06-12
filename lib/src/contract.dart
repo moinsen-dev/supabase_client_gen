@@ -10,6 +10,7 @@ class SupabaseContract {
   final Map<String, Map<String, TableConfig>> dataModel;
   final StorageConfig? storage;
   final Map<String, EdgeFunctionConfig>? edgeFunctions;
+  final Map<String, RpcFunctionConfig>? rpcFunctions;
   final RealtimeConfig? realtime;
 
   const SupabaseContract({
@@ -21,6 +22,7 @@ class SupabaseContract {
     required this.dataModel,
     this.storage,
     this.edgeFunctions,
+    this.rpcFunctions,
     this.realtime,
   });
 
@@ -40,6 +42,9 @@ class SupabaseContract {
       edgeFunctions: yaml['edge_functions'] != null
           ? _parseEdgeFunctions(yaml['edge_functions'] as Map<String, dynamic>)
           : null,
+      rpcFunctions: yaml['rpc_functions'] != null
+          ? _parseRpcFunctions(yaml['rpc_functions'] as Map<String, dynamic>)
+          : null,
       realtime: yaml['realtime'] != null
           ? RealtimeConfig.fromYaml(yaml['realtime'] as Map<String, dynamic>)
           : null,
@@ -55,6 +60,21 @@ class SupabaseContract {
     for (final entry in yaml.entries) {
       if (entry.value is! Map) continue;
       result[entry.key] = EdgeFunctionConfig.fromYaml(
+        (entry.value as Map).cast<String, dynamic>(),
+      );
+    }
+    return result;
+  }
+
+  /// Parses rpc-function entries, skipping non-mapping keys (mirrors the
+  /// tolerance for scalar keys under `edge_functions`).
+  static Map<String, RpcFunctionConfig> _parseRpcFunctions(
+    Map<String, dynamic> yaml,
+  ) {
+    final result = <String, RpcFunctionConfig>{};
+    for (final entry in yaml.entries) {
+      if (entry.value is! Map) continue;
+      result[entry.key] = RpcFunctionConfig.fromYaml(
         (entry.value as Map).cast<String, dynamic>(),
       );
     }
@@ -216,17 +236,8 @@ class TableConfig {
   }
 
   String _mapPgType(String pgType) {
-    if (pgType == 'uuid') return 'String';
-    if (pgType == 'text') return 'String';
-    if (pgType == 'integer' || pgType == 'int4') return 'int';
-    if (pgType == 'bigint' || pgType == 'int8') return 'int';
-    if (pgType == 'numeric' || pgType == 'decimal') return 'double';
-    if (pgType == 'boolean' || pgType == 'bool') return 'bool';
-    if (pgType == 'timestamptz' || pgType == 'timestamp') return 'DateTime';
-    if (pgType == 'date') return 'DateTime';
-    if (pgType == 'jsonb' || pgType == 'json') return 'Map<String, dynamic>';
-    if (pgType.startsWith('vector')) return 'List<double>';
-    if (pgType == 'text[]' || pgType == '_text') return 'List<String>';
+    final scalar = tryMapPgScalarType(pgType);
+    if (scalar != null) return scalar;
     if (enumValues != null && enumValues!.containsKey(pgType)) {
       return _toPascalCase(pgType);
     }
@@ -238,6 +249,24 @@ class TableConfig {
       .where((w) => w.isNotEmpty)
       .map((w) => w[0].toUpperCase() + w.substring(1))
       .join();
+}
+
+/// Maps a Postgres scalar type to its Dart type, or null when the type is not
+/// a recognised scalar (e.g. a contract-declared enum). Shared by model fields
+/// and RPC argument typing so both projections agree on the mapping.
+String? tryMapPgScalarType(String pgType) {
+  if (pgType == 'uuid') return 'String';
+  if (pgType == 'text') return 'String';
+  if (pgType == 'integer' || pgType == 'int4') return 'int';
+  if (pgType == 'bigint' || pgType == 'int8') return 'int';
+  if (pgType == 'numeric' || pgType == 'decimal') return 'double';
+  if (pgType == 'boolean' || pgType == 'bool') return 'bool';
+  if (pgType == 'timestamptz' || pgType == 'timestamp') return 'DateTime';
+  if (pgType == 'date') return 'DateTime';
+  if (pgType == 'jsonb' || pgType == 'json') return 'Map<String, dynamic>';
+  if (pgType.startsWith('vector')) return 'List<double>';
+  if (pgType == 'text[]' || pgType == '_text') return 'List<String>';
+  return null;
 }
 
 class StorageConfig {
@@ -309,6 +338,53 @@ class EdgeFunctionConfig {
     if (val is List) return val.cast<String>();
     return [];
   }
+}
+
+/// A Postgres function exposed to clients via `client.rpc(...)`.
+///
+/// Declared under the top-level `rpc_functions:` section of the contract:
+///
+/// ```yaml
+/// rpc_functions:
+///   get_vote_tally:
+///     description: Tally votes for a song in a session.
+///     args: { session_uuid: uuid, song_uuid: uuid }
+///     returns: json
+/// ```
+class RpcFunctionConfig {
+  /// Ordered argument name → Postgres type (same type names as table fields).
+  final Map<String, String> args;
+
+  /// Subset of [args] that are optional/nullable — omitted from the RPC call
+  /// when null, so Postgres `DEFAULT` argument values still apply.
+  final List<String> optionalArgs;
+
+  /// One of `uuid | text | integer | boolean | json | void` or
+  /// `row:<table>` / `rows:<table>` referencing a `data_model.public` table.
+  final String returns;
+
+  final String? description;
+
+  const RpcFunctionConfig({
+    required this.args,
+    this.optionalArgs = const [],
+    required this.returns,
+    this.description,
+  });
+
+  factory RpcFunctionConfig.fromYaml(Map<String, dynamic> yaml) =>
+      RpcFunctionConfig(
+        args: yaml['args'] != null
+            ? (yaml['args'] as Map<String, dynamic>).map(
+                (k, v) => MapEntry(k, v as String),
+              )
+            : const {},
+        optionalArgs: yaml['optional_args'] != null
+            ? (yaml['optional_args'] as List).cast<String>()
+            : const [],
+        returns: yaml['returns'] as String,
+        description: yaml['description'] as String?,
+      );
 }
 
 class RealtimeConfig {

@@ -71,6 +71,27 @@ data_model:
         update: edge_function_only
         delete: edge_function_only
 
+# Postgres functions exposed to clients via client.rpc(...). Each entry
+# becomes a typed top-level Dart wrapper in rpc/rpc.dart.
+rpc_functions:
+  add_thing_note:
+    description: Appends a note to a thing, returning the new note id.
+    args:
+      p_thing_id: uuid
+      p_note: text
+      p_pinned: boolean
+    optional_args:           # subset of args; omitted from the call when null
+      - p_pinned
+    returns: uuid            # uuid | text | integer | boolean | json | void
+                             # | row:<table> | rows:<table>
+  get_thing_stats:
+    args: { p_workspace_id: uuid }
+    returns: json
+  find_thing:
+    description: Look a thing up by exact name.
+    args: { p_name: text }
+    returns: row:things      # maps onto the generated Thing model
+
 storage:
   buckets:
     avatars:

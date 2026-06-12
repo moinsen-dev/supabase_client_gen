@@ -80,6 +80,70 @@ void main() {
       );
     });
 
+    test('parses rpc_functions with args, optional_args and returns', () {
+      final yaml = '$_validHeader'
+          'rpc_functions:\n'
+          '  do_thing:\n'
+          '    args: { p_id: uuid, p_note: text }\n'
+          '    optional_args: [p_note]\n'
+          '    returns: row:things\n';
+      final c = loadContract(_tmp(yaml));
+      final fn = c.rpcFunctions!['do_thing']!;
+      expect(fn.args.keys.toList(), ['p_id', 'p_note']);
+      expect(fn.optionalArgs, ['p_note']);
+      expect(fn.returns, 'row:things');
+    });
+
+    test('reports the offending path for an invalid rpc returns', () {
+      final yaml = '$_validHeader'
+          'rpc_functions:\n'
+          '  do_thing:\n'
+          '    returns: blob\n';
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>().having((e) => e.message, 'message',
+            contains('rpc_functions.do_thing.returns'))),
+      );
+    });
+
+    test('rejects a row: return referencing an undeclared table', () {
+      final yaml = '$_validHeader'
+          'rpc_functions:\n'
+          '  do_thing:\n'
+          '    returns: row:nonexistent\n';
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>().having((e) => e.message, 'message',
+            contains("references table 'nonexistent'"))),
+      );
+    });
+
+    test('rejects optional_args that are not a subset of args', () {
+      final yaml = '$_validHeader'
+          'rpc_functions:\n'
+          '  do_thing:\n'
+          '    args: { p_id: uuid }\n'
+          '    optional_args: [p_ghost]\n'
+          '    returns: void\n';
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>().having((e) => e.message, 'message',
+            contains('rpc_functions.do_thing.optional_args'))),
+      );
+    });
+
+    test('reports a missing rpc returns with its path', () {
+      final yaml = '$_validHeader'
+          'rpc_functions:\n'
+          '  do_thing:\n'
+          '    args: { p_id: uuid }\n';
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>().having((e) => e.message, 'message',
+            contains('rpc_functions.do_thing.returns is required'))),
+      );
+    });
+
     test('tolerates a scalar runtime key under edge_functions', () {
       final yaml = '$_validHeader'
           'edge_functions:\n'

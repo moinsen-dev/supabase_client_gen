@@ -105,6 +105,78 @@ void _validate(Map<String, dynamic> root) {
       }
     }
   }
+
+  _validateRpcFunctions(root);
+}
+
+const _rpcScalarReturns = {
+  'uuid',
+  'text',
+  'integer',
+  'boolean',
+  'json',
+  'void',
+};
+
+void _validateRpcFunctions(Map<String, dynamic> root) {
+  final rpc = root['rpc_functions'];
+  if (rpc == null) return;
+  if (rpc is! Map) {
+    throw ContractError(
+        "'rpc_functions' must be a mapping of function name → config.");
+  }
+  final publicTables =
+      ((root['data_model'] as Map<String, dynamic>)['public'] as Map?)
+              ?.keys
+              .map((k) => k.toString())
+              .toSet() ??
+          {};
+
+  for (final entry in rpc.cast<String, dynamic>().entries) {
+    if (entry.value is! Map) continue; // tolerate scalar keys
+    final name = entry.key;
+    final loc = 'rpc_functions.$name';
+    final fn = (entry.value as Map).cast<String, dynamic>();
+
+    final args = fn['args'];
+    if (args != null && args is! Map) {
+      throw ContractError('$loc.args must be a mapping of argument → type.');
+    }
+    final argNames =
+        (args as Map?)?.keys.map((k) => k.toString()).toSet() ?? <String>{};
+
+    final optional = fn['optional_args'];
+    if (optional != null) {
+      if (optional is! List) {
+        throw ContractError('$loc.optional_args must be a list.');
+      }
+      for (final o in optional) {
+        if (!argNames.contains(o.toString())) {
+          throw ContractError(
+              "$loc.optional_args contains '$o' which is not declared in $loc.args.");
+        }
+      }
+    }
+
+    final returns = fn['returns'];
+    if (returns is! String || returns.isEmpty) {
+      throw ContractError(
+          '$loc.returns is required and must be one of: uuid | text | integer '
+          '| boolean | json | void | row:<table> | rows:<table>.');
+    }
+    if (returns.startsWith('row:') || returns.startsWith('rows:')) {
+      final table = returns.substring(returns.indexOf(':') + 1);
+      if (!publicTables.contains(table)) {
+        throw ContractError(
+            "$loc.returns references table '$table' which is not declared in "
+            'data_model.public.');
+      }
+    } else if (!_rpcScalarReturns.contains(returns)) {
+      throw ContractError(
+          "$loc.returns is '$returns' but must be one of: uuid | text | "
+          'integer | boolean | json | void | row:<table> | rows:<table>.');
+    }
+  }
 }
 
 void _requireMap(Map<String, dynamic> parent, String key) {

@@ -1,3 +1,15 @@
+## 0.3.0
+
+### Added
+- **`rpc_functions` contract section** — declare Postgres functions (name,
+  `args`, `optional_args`, `returns`, `description`) in the contract and get
+  typed top-level Dart wrappers over `client.rpc(...)` in `rpc/rpc.dart`.
+  Argument types use the same Postgres→Dart mapping as model fields; optional
+  args are omitted from the call when null so `DEFAULT` values apply;
+  `returns: row:<table>` / `rows:<table>` decode into the table's generated
+  model. `validate --ts` now checks contract RPC functions against the
+  gen-types `Functions` scope — a function missing in the DB is blocking drift.
+
 ## 0.2.1
 
 ### Changed

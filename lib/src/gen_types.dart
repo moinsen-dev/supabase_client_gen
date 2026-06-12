@@ -9,11 +9,16 @@ class GenTypes {
   final Map<String, Map<String, bool>> columnNullability;
   final Set<String> enumNames;
 
+  /// Names of Postgres functions in the `public.Functions` scope — the DB-side
+  /// truth that contract-declared `rpc_functions` are checked against.
+  final Set<String> functionNames;
+
   const GenTypes({
     required this.tableNames,
     required this.tableColumns,
     required this.columnNullability,
     required this.enumNames,
+    this.functionNames = const {},
   });
 
   factory GenTypes.parse(String ts) {
@@ -21,6 +26,7 @@ class GenTypes {
     final tableColumns = <String, Set<String>>{};
     final columnNullability = <String, Map<String, bool>>{};
     final enumNames = <String>{};
+    final functionNames = <String>{};
 
     final lines = ts.split('\n');
 
@@ -44,6 +50,7 @@ class GenTypes {
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
       final trimmed = line.trim();
+      final depthBefore = depth; // depth at the start of this line
       count(trimmed);
 
       switch (state) {
@@ -154,8 +161,20 @@ class GenTypes {
           break;
 
         case 'views':
-        case 'functions':
           if (depth <= scopeDepth) state = 'inPublic';
+          break;
+
+        case 'functions':
+          if (depth <= scopeDepth) {
+            state = 'inPublic';
+            break;
+          }
+          // Function names sit directly under the Functions scope; their
+          // Args/Returns members live one level deeper.
+          if (depthBefore == scopeDepth + 1) {
+            final fnMatch = RegExp(r'^(\w+)\??:').firstMatch(trimmed);
+            if (fnMatch != null) functionNames.add(fnMatch.group(1)!);
+          }
           break;
 
         case 'enums':
@@ -176,6 +195,7 @@ class GenTypes {
       tableColumns: tableColumns,
       columnNullability: columnNullability,
       enumNames: enumNames,
+      functionNames: functionNames,
     );
   }
 

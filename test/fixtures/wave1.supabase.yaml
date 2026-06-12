@@ -1,0 +1,102 @@
+# Wave-1 feature fixture: rpc_functions, composite primary keys, views.
+contract:
+  name: wave1_contract
+  version: "0.1.0"
+  date: "2026-06-12"
+
+project:
+  remote:
+    name: wave1
+    ref: wave1ref00000000
+
+auth:
+  provider: supabase
+  planned_sign_in_methods:
+    - email
+
+data_model:
+  public:
+    # Server-managed table referenced by `returns: row:sessions`. The model
+    # class `Session` deliberately collides with gotrue's `Session` to prove
+    # the narrowed supabase_flutter imports hold up.
+    sessions:
+      ownership: global
+      primary_key: id
+      fields:
+        id: uuid
+        code: text
+        created_at: timestamptz
+      client_access:
+        select: authenticated
+        insert: edge_function_only
+        update: edge_function_only
+        delete: edge_function_only
+
+    # Client-mutable table referenced by `returns: rows:songs`.
+    songs:
+      ownership: global
+      primary_key: id
+      fields:
+        id: uuid
+        session_id: uuid
+        title: text
+        duration: integer
+        thumbnail_url: text
+      nullable_fields:
+        - thumbnail_url
+      client_access:
+        select: authenticated
+        insert: authenticated
+        update: authenticated
+        delete: authenticated
+
+rpc_functions:
+  add_song_to_player_queue:
+    description: Adds a song to the calling player's personal queue.
+    args:
+      p_session_id: uuid
+      p_user_id: uuid
+      p_title: text
+      p_duration: integer
+      p_thumbnail_url: text
+    optional_args:
+      - p_thumbnail_url
+    returns: uuid
+
+  get_vote_tally:
+    args: { session_uuid: uuid, song_uuid: uuid }
+    returns: json
+
+  get_session_by_code:
+    description: Fetch a session row by join code.
+    args:
+      p_code: text
+    returns: row:sessions
+
+  list_session_songs:
+    description: All songs in a session, in queue order.
+    args:
+      p_session_id: uuid
+      p_since: timestamptz
+    optional_args:
+      - p_since
+    returns: rows:songs
+
+  reset_session:
+    description: Clears all queues in a session.
+    args:
+      p_session_id: uuid
+    returns: void
+
+  heartbeat:
+    description: Liveness probe with no arguments.
+    returns: boolean
+
+  queue_length:
+    args: { p_session_id: uuid }
+    returns: integer
+
+realtime:
+  publication:
+    allowed_tables:
+      - public.songs

@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PKG="$ROOT/tool/compile_check"
-FIXTURES=("edge_cases" "helpdesk")
+FIXTURES=("edge_cases" "helpdesk" "wave1")
 
 cd "$PKG"
 flutter pub get >/dev/null

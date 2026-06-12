@@ -18,6 +18,7 @@ import 'package:test/test.dart';
 const _fixtures = {
   'helpdesk': 'test/fixtures/helpdesk.supabase.yaml',
   'edge_cases': 'test/fixtures/edge_cases.supabase.yaml',
+  'wave1': 'test/fixtures/wave1.supabase.yaml',
 };
 
 void main() {

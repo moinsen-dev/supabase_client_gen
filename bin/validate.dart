@@ -184,6 +184,23 @@ bool _checkGenTypes(SupabaseContract contract, String tsPath, bool jsonOut) {
     issues++;
   }
 
+  // RPC functions declared in the contract must exist in the database
+  // (= appear in the gen-types Functions scope). Missing = blocking drift.
+  final contractRpc = contract.rpcFunctions?.keys.toSet() ?? <String>{};
+  for (final f in contractRpc.difference(genTypes.functionNames)) {
+    if (!jsonOut) {
+      stdout.writeln(
+          '  ✗ RPC function $f in contract but not in supabase.types.ts');
+    }
+    issues++;
+  }
+  for (final f in genTypes.functionNames.difference(contractRpc)) {
+    if (!jsonOut) {
+      stdout
+          .writeln('  ℹ Function $f in supabase.types.ts but not in contract');
+    }
+  }
+
   if (issues == 0 && !jsonOut) {
     stdout.writeln('  OK: Contract matches supabase.types.ts.');
   }
