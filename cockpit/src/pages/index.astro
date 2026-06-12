@@ -1,0 +1,11 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SchemaGraph from '../components/SchemaGraph';
+import { loadCockpit } from '../lib/contract';
+
+const c = loadCockpit();
+---
+
+<Layout title="Schema" active="schema" fullBleed>
+  <SchemaGraph client:only="react" tables={c.tables} refs={c.refs} />
+</Layout>

@@ -1,0 +1,82 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { loadCockpit } from '../lib/contract';
+
+const c = loadCockpit();
+---
+
+<Layout title="Realtime & Storage" active="realtime">
+  <h1>Realtime &amp; Storage</h1>
+  <p class="lede">
+    Live data surface and file storage as declared in the contract's <code>realtime</code> and
+    <code>storage</code> sections.
+  </p>
+
+  <h2 class="section-h">
+    Realtime publication <span class="pill">{c.realtimeTables.length} tables</span>
+  </h2>
+  {
+    c.realtimeTables.length === 0 ? (
+      <p class="empty-note">No tables in the realtime publication.</p>
+    ) : (
+      <div class="chip-row">
+        {c.realtimeTables.map((t) => (
+          <span class="table-chip">{t}</span>
+        ))}
+      </div>
+    )
+  }
+
+  <h2 class="section-h">
+    Realtime events <span class="pill">{c.realtimeEvents.length}</span>
+  </h2>
+  {
+    c.realtimeEvents.length === 0 ? (
+      <p class="empty-note">No realtime events declared.</p>
+    ) : (
+      <div class="cards-grid">
+        {c.realtimeEvents.map((e) => (
+          <div class="card">
+            <h3>
+              <code>{e.name}</code>
+            </h3>
+            <dl class="kv">
+              <dt>source</dt>
+              <dd>{e.source ?? '—'}</dd>
+              <dt>audience</dt>
+              <dd>{e.audience ?? '—'}</dd>
+            </dl>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  <h2 class="section-h">
+    Storage buckets <span class="pill">{c.buckets.length}</span>
+  </h2>
+  {
+    c.buckets.length === 0 ? (
+      <p class="empty-note">No storage buckets declared.</p>
+    ) : (
+      <div class="cards-grid">
+        {c.buckets.map((b) => (
+          <div class="card">
+            <h3>
+              <code>{b.name}</code>
+              <span class={`access-chip ${b.isPublic ? 'access-authenticated' : 'access-edge-only'}`}>
+                {b.isPublic ? 'public' : 'private'}
+              </span>
+            </h3>
+            <dl class="kv">
+              <dt>mime types</dt>
+              <dd>{b.allowedMimeTypes.length > 0 ? b.allowedMimeTypes.join(', ') : 'any'}</dd>
+              <dt>size limit</dt>
+              <dd>{b.fileSizeLimitMb != null ? `${b.fileSizeLimitMb} MB` : 'none'}</dd>
+            </dl>
+          </div>
+        ))}
+      </div>
+    )
+  }
+</Layout>

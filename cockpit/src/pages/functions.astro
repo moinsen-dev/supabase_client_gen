@@ -1,0 +1,92 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { loadCockpit } from '../lib/contract';
+
+const c = loadCockpit();
+---
+
+<Layout title="Functions" active="functions">
+  <h1>Functions</h1>
+  <p class="lede">
+    Server-side surface of the contract: edge functions{
+      c.edgeRuntime && <> (runtime: <code>{c.edgeRuntime}</code>)</>
+    }{c.rpcFunctions.length > 0 && <> and Postgres RPC functions</>}.
+  </p>
+
+  <h2 class="section-h">
+    Edge functions <span class="pill">{c.edgeFunctions.length}</span>
+  </h2>
+  {
+    c.edgeFunctions.length === 0 ? (
+      <p class="empty-note">No edge functions declared in this contract.</p>
+    ) : (
+      <div class="cards-grid">
+        {c.edgeFunctions.map((fn) => (
+          <div class="card">
+            <h3>
+              <code>{fn.name}</code>
+              {fn.method && <span class="method-badge">{fn.method}</span>}
+            </h3>
+            {fn.description && <p class="desc">{fn.description}</p>}
+            {(fn.requiredFields.length > 0 || fn.optionalFields.length > 0) && (
+              <ul class="field-list">
+                {fn.requiredFields.map((f) => (
+                  <li>
+                    <span class="req">req</span>
+                    {f}
+                  </li>
+                ))}
+                {fn.optionalFields.map((f) => (
+                  <li>
+                    <span class="opt">opt</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  <h2 class="section-h">
+    RPC functions <span class="pill">{c.rpcFunctions.length}</span>
+  </h2>
+  {
+    c.rpcFunctions.length === 0 ? (
+      <p class="empty-note">No RPC functions declared in this contract.</p>
+    ) : (
+      <div class="cards-grid">
+        {c.rpcFunctions.map((fn) => (
+          <div class="card">
+            <h3>
+              <code>{fn.name}</code>
+              <span class="method-badge">RPC</span>
+            </h3>
+            {fn.description && <p class="desc">{fn.description}</p>}
+            {fn.args.length > 0 && (
+              <ul class="field-list">
+                {fn.args.map((a) => (
+                  <li>
+                    <span class={a.optional ? 'opt' : 'req'}>{a.optional ? 'opt' : 'req'}</span>
+                    {a.name}
+                    {a.type && <span class="ftype">{a.type}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {fn.returns && (
+              <ul class="field-list">
+                <li>
+                  <span class="req">returns</span>
+                  <span class="ftype">{fn.returns}</span>
+                </li>
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+</Layout>

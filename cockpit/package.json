@@ -1,0 +1,26 @@
+{
+  "name": "supabase-client-gen-cockpit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Contract Cockpit — static visualization of a supabase_client_gen contract",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/react": "^4.2.0",
+    "@dagrejs/dagre": "^1.1.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@xyflow/react": "^12.4.0",
+    "astro": "^5.7.0",
+    "js-yaml": "^4.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9"
+  }
+}

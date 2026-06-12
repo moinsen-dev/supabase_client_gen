@@ -1,0 +1,76 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { accessClass, loadCockpit } from '../lib/contract';
+
+const c = loadCockpit();
+const operations = ['select', 'insert', 'update', 'delete'] as const;
+
+const legendEntries: { level: string; hint: string }[] = c.accessLevels.map((level) => ({
+  level,
+  hint:
+    level === 'authenticated'
+      ? 'any signed-in user'
+      : level === 'own_row'
+        ? 'only rows owned by the user'
+        : level === 'edge_function_only'
+          ? 'server-side only, no direct client access'
+          : level.startsWith('member_of_')
+            ? `members of the ${level.slice('member_of_'.length)}`
+            : 'custom policy',
+}));
+---
+
+<Layout title="Security" active="security">
+  <h1>Security matrix</h1>
+  <p class="lede">
+    Client access per table and operation, as declared in <code>client_access</code>. Who may do
+    what — at a glance.
+  </p>
+
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Table</th>
+          {operations.map((op) => <th>{op}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          c.tables.map((t) => (
+            <tr>
+              <td class="table-name">
+                {t.name}
+                {t.kind === 'view' && <span class="tnode-badge" style="margin-left:7px">VIEW</span>}
+              </td>
+              {operations.map((op) => {
+                const level = t.clientAccess[op];
+                return (
+                  <td>
+                    {level ? (
+                      <span class={`access-chip access-${accessClass(level)}`}>{level}</span>
+                    ) : (
+                      <span class="access-chip access-other">—</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <strong style="color:var(--text)">Legend:</strong>
+    {
+      legendEntries.map((e) => (
+        <span>
+          <span class={`access-chip access-${accessClass(e.level)}`}>{e.level}</span>
+          <span style="margin-left:5px">{e.hint}</span>
+        </span>
+      ))
+    }
+  </div>
+</Layout>
