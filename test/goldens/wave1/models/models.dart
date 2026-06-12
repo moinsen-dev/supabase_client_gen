@@ -4,3 +4,4 @@
 export 'sessions.dart';
 export 'songs.dart';
 export 'session_players.dart';
+export 'session_queue_overview.dart';

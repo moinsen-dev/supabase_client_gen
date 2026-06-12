@@ -71,6 +71,21 @@ data_model:
         update: edge_function_only
         delete: edge_function_only
 
+    # A read-only view (kind: view): generates a model and a repository with
+    # only select/stream — never insert/update/delete, regardless of
+    # client_access.
+    things_overview:
+      kind: view
+      ownership: workspace
+      primary_key: id
+      fields:
+        id: uuid
+        workspace_id: uuid
+        name: text
+        note_count: integer
+      client_access:
+        select: member_of_workspace
+
 # Postgres functions exposed to clients via client.rpc(...). Each entry
 # becomes a typed top-level Dart wrapper in rpc/rpc.dart.
 rpc_functions:

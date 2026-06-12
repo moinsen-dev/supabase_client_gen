@@ -65,6 +65,23 @@ data_model:
         update: authenticated
         delete: authenticated
 
+    # A read-only view: repository gets select/stream only — the write access
+    # declared below is deliberately ignored for views.
+    session_queue_overview:
+      kind: view
+      ownership: global
+      primary_key: id
+      fields:
+        id: uuid
+        session_id: uuid
+        title: text
+        vote_count: integer
+      client_access:
+        select: authenticated
+        insert: authenticated # ignored: views never generate mutations
+        update: authenticated
+        delete: authenticated
+
 rpc_functions:
   add_song_to_player_queue:
     description: Adds a song to the calling player's personal queue.

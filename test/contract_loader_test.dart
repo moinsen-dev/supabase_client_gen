@@ -166,6 +166,25 @@ void main() {
       );
     });
 
+    test('parses kind: view and defaults kind to table', () {
+      final yaml = _validHeader.replaceFirst('      ownership: workspace\n',
+          '      ownership: workspace\n      kind: view\n');
+      final c = loadContract(_tmp(yaml));
+      expect(c.publicTables['things']!.isView, isTrue);
+      expect(loadContract(_tmp(_validHeader)).publicTables['things']!.isView,
+          isFalse);
+    });
+
+    test('rejects an unknown kind with its path', () {
+      final yaml = _validHeader.replaceFirst('      ownership: workspace\n',
+          '      ownership: workspace\n      kind: materialized\n');
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>().having((e) => e.message, 'message',
+            contains('data_model.public.things.kind'))),
+      );
+    });
+
     test('tolerates a scalar runtime key under edge_functions', () {
       final yaml = '$_validHeader'
           'edge_functions:\n'

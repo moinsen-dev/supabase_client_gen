@@ -168,4 +168,32 @@ void main() {
       expect(songs, contains(".stream(primaryKey: ['id'])"));
     });
   });
+
+  group('views', () {
+    final wave1 = ClientGenerator(
+      loadContract('test/fixtures/wave1.supabase.yaml'),
+    ).generate();
+    final model = wave1['models/session_queue_overview.dart']!;
+    final repo = wave1['repositories/session_queue_overview_repository.dart']!;
+
+    test('view model and repository are marked as read-only views', () {
+      expect(model,
+          contains('// View: public.session_queue_overview (read-only)'));
+      expect(
+          repo, contains('// View: public.session_queue_overview (read-only)'));
+    });
+
+    test('view repository has select but no mutations despite client_access',
+        () {
+      expect(repo, contains('Future<List<SessionQueueOverview>> select('));
+      expect(repo, isNot(contains('insert(')));
+      expect(repo, isNot(contains('update(')));
+      expect(repo, isNot(contains('delete(')));
+    });
+
+    test('view repository is exported via the repositories barrel', () {
+      expect(wave1['repositories/repositories.dart'],
+          contains("export 'session_queue_overview_repository.dart';"));
+    });
+  });
 }

@@ -14,6 +14,11 @@
   every key part as a required parameter and chain one `.eq()` per key column;
   `stream` declares the full key. The scalar string form is unchanged and
   produces byte-identical output.
+- **Views as first-class contract entries** — a `data_model` entry may declare
+  `kind: view` (default `table`). Views generate a model plus a read-only
+  repository with only `select`/`stream` — insert/update/delete are never
+  generated, regardless of `client_access`. Generated files are headed
+  `// View: public.<name> (read-only)`.
 
 ## 0.2.1
 

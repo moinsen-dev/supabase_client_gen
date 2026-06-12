@@ -99,6 +99,11 @@ void _validate(Map<String, dynamic> root) {
       final t = (tableEntry.value as Map).cast<String, dynamic>();
       _requireString(t, 'ownership', '$loc.ownership');
       _requirePrimaryKey(t, '$loc.primary_key');
+      final kind = t['kind'];
+      if (kind != null && kind != 'table' && kind != 'view') {
+        throw ContractError(
+            "$loc.kind is '$kind' but must be 'table' (default) or 'view'.");
+      }
       if (t['fields'] is! Map) {
         throw ContractError(
             "$loc.fields is required and must be a mapping of column → type.");

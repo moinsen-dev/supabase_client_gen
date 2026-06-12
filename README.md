@@ -128,6 +128,17 @@ data_model:
         update: member_of_workspace
         delete: member_of_workspace
 
+    # Views are first-class: kind: view yields a model + a read-only
+    # repository (select/stream only, regardless of client_access).
+    things_overview:
+      kind: view                 # default: table
+      ownership: workspace
+      primary_key: id
+      fields:
+        id: uuid
+        name: text
+        note_count: integer
+
 storage:
   buckets:
     avatars:
@@ -257,6 +268,11 @@ await playersRepo.delete(sessionId, userId);
 Tables without a `workspace_id` column get unscoped `select()` / `stream()`.
 Read-only tables (all writes `edge_function_only`) get no mutation methods, but
 still get a `.stream()` if realtime is enabled.
+
+Entries declared `kind: view` generate a model and a repository with **only**
+`select()` (plus `stream()` when realtime-enabled) — insert/update/delete are
+never generated for views, regardless of `client_access`. Generated files carry
+a `// View: public.<name> (read-only)` header.
 
 ### Edge function client
 

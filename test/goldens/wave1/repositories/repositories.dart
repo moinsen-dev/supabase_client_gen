@@ -3,3 +3,4 @@
 
 export 'songs_repository.dart';
 export 'session_players_repository.dart';
+export 'session_queue_overview_repository.dart';

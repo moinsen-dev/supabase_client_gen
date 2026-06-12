@@ -181,6 +181,11 @@ class SchemaConfig {
 class TableConfig {
   final String ownership;
 
+  /// `table` (default) or `view`. Views are read-only: their repositories get
+  /// only `select`/`stream`, never insert/update/delete — regardless of
+  /// `client_access`.
+  final String kind;
+
   /// Primary key column(s). The contract accepts both the scalar form
   /// (`primary_key: id`) and the list form for composite keys
   /// (`primary_key: [session_id, user_id]`).
@@ -194,6 +199,7 @@ class TableConfig {
 
   const TableConfig({
     required this.ownership,
+    this.kind = 'table',
     required this.primaryKey,
     required this.fields,
     this.enumValues,
@@ -203,8 +209,11 @@ class TableConfig {
     this.nullableFields,
   });
 
+  bool get isView => kind == 'view';
+
   factory TableConfig.fromYaml(Map<String, dynamic> yaml) => TableConfig(
         ownership: yaml['ownership'] as String,
+        kind: yaml['kind'] as String? ?? 'table',
         primaryKey: yaml['primary_key'] is List
             ? (yaml['primary_key'] as List).cast<String>()
             : [yaml['primary_key'] as String],
