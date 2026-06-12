@@ -9,6 +9,11 @@
   `returns: row:<table>` / `rows:<table>` decode into the table's generated
   model. `validate --ts` now checks contract RPC functions against the
   gen-types `Functions` scope — a function missing in the DB is blocking drift.
+- **Composite primary keys** — `primary_key` additionally accepts a list form
+  (`primary_key: [session_id, user_id]`). Repository `update`/`delete` then take
+  every key part as a required parameter and chain one `.eq()` per key column;
+  `stream` declares the full key. The scalar string form is unchanged and
+  produces byte-identical output.
 
 ## 0.2.1
 

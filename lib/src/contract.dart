@@ -180,7 +180,11 @@ class SchemaConfig {
 
 class TableConfig {
   final String ownership;
-  final String primaryKey;
+
+  /// Primary key column(s). The contract accepts both the scalar form
+  /// (`primary_key: id`) and the list form for composite keys
+  /// (`primary_key: [session_id, user_id]`).
+  final List<String> primaryKey;
   final Map<String, String> fields;
   final Map<String, List<String>>? enumValues;
   final Map<String, String>? clientAccess;
@@ -201,7 +205,9 @@ class TableConfig {
 
   factory TableConfig.fromYaml(Map<String, dynamic> yaml) => TableConfig(
         ownership: yaml['ownership'] as String,
-        primaryKey: yaml['primary_key'] as String,
+        primaryKey: yaml['primary_key'] is List
+            ? (yaml['primary_key'] as List).cast<String>()
+            : [yaml['primary_key'] as String],
         fields: (yaml['fields'] as Map<String, dynamic>).map(
           (k, v) => MapEntry(k, v as String),
         ),

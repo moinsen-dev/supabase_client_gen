@@ -2,3 +2,4 @@
 // Source of truth: the supabase.yaml contract.
 
 export 'songs_repository.dart';
+export 'session_players_repository.dart';

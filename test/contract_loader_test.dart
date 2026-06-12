@@ -144,6 +144,28 @@ void main() {
       );
     });
 
+    test('parses the composite primary_key list form', () {
+      final yaml = _validHeader.replaceFirst(
+          '      primary_key: id\n', '      primary_key: [id, name]\n');
+      final c = loadContract(_tmp(yaml));
+      expect(c.publicTables['things']!.primaryKey, ['id', 'name']);
+    });
+
+    test('scalar primary_key parses as a single-element list', () {
+      final c = loadContract(_tmp(_validHeader));
+      expect(c.publicTables['things']!.primaryKey, ['id']);
+    });
+
+    test('rejects an empty primary_key list with its path', () {
+      final yaml = _validHeader.replaceFirst(
+          '      primary_key: id\n', '      primary_key: []\n');
+      expect(
+        () => loadContract(_tmp(yaml)),
+        throwsA(isA<ContractError>().having((e) => e.message, 'message',
+            contains('data_model.public.things.primary_key'))),
+      );
+    });
+
     test('tolerates a scalar runtime key under edge_functions', () {
       final yaml = '$_validHeader'
           'edge_functions:\n'

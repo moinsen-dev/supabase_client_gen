@@ -50,6 +50,21 @@ data_model:
         update: authenticated
         delete: authenticated
 
+    # Composite primary key: update/delete take all key parts and chain .eq().
+    session_players:
+      ownership: global
+      primary_key: [session_id, user_id]
+      fields:
+        session_id: uuid
+        user_id: uuid
+        role: text
+        joined_at: timestamptz
+      client_access:
+        select: authenticated
+        insert: authenticated
+        update: authenticated
+        delete: authenticated
+
 rpc_functions:
   add_song_to_player_queue:
     description: Adds a song to the calling player's personal queue.
@@ -100,3 +115,4 @@ realtime:
   publication:
     allowed_tables:
       - public.songs
+      - public.session_players

@@ -133,4 +133,39 @@ void main() {
       expect(rpc, contains("params['p_since'] = pSince.toIso8601String();"));
     });
   });
+
+  group('composite primary keys', () {
+    final wave1 = ClientGenerator(
+      loadContract('test/fixtures/wave1.supabase.yaml'),
+    ).generate();
+    final r = wave1['repositories/session_players_repository.dart']!;
+
+    test('update takes all key parts and chains .eq() per key column', () {
+      expect(
+          r,
+          contains(
+              'update(String sessionId, String userId, Map<String, dynamic> data)'));
+      expect(r, contains(".eq('session_id', sessionId).eq('user_id', userId)"));
+    });
+
+    test('delete takes all key parts', () {
+      expect(
+          r, contains('Future<void> delete(String sessionId, String userId)'));
+      expect(
+          r,
+          contains(
+              ".delete().eq('session_id', sessionId).eq('user_id', userId)"));
+    });
+
+    test('stream declares the full composite primary key', () {
+      expect(r, contains(".stream(primaryKey: ['session_id', 'user_id'])"));
+    });
+
+    test('single-column string form is unchanged (degenerate case)', () {
+      final songs = wave1['repositories/songs_repository.dart']!;
+      expect(songs, contains('update(String id, Map<String, dynamic> data)'));
+      expect(songs, contains(".eq('id', id)"));
+      expect(songs, contains(".stream(primaryKey: ['id'])"));
+    });
+  });
 }

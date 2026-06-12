@@ -111,6 +111,7 @@ data_model:
     things:
       ownership: workspace
       primary_key: id            # honoured by update/delete/stream
+                                 # composite keys: primary_key: [session_id, user_id]
       fields:
         id: uuid
         workspace_id: uuid       # presence makes the repo workspace-scoped
@@ -244,10 +245,18 @@ await repo.delete(id);
 repo.stream(workspaceId: wsId).listen((things) => print(things));
 ```
 
-`update`/`delete`/`stream` use the table's declared `primary_key`. Tables without
-a `workspace_id` column get unscoped `select()` / `stream()`. Read-only tables
-(all writes `edge_function_only`) get no mutation methods, but still get a
-`.stream()` if realtime is enabled.
+`update`/`delete`/`stream` use the table's declared `primary_key`. For a
+composite key (`primary_key: [session_id, user_id]`) they take every key part
+as a required parameter and chain one `.eq()` per key column:
+
+```dart
+await playersRepo.update(sessionId, userId, {'role': 'host'});
+await playersRepo.delete(sessionId, userId);
+```
+
+Tables without a `workspace_id` column get unscoped `select()` / `stream()`.
+Read-only tables (all writes `edge_function_only`) get no mutation methods, but
+still get a `.stream()` if realtime is enabled.
 
 ### Edge function client
 
@@ -306,6 +315,22 @@ void main() {
   }
 }
 ```
+
+## Cockpit
+
+The repo ships a **Contract Cockpit** in [`cockpit/`](cockpit/) — a statically
+generated, dark-themed visualization of any contract. It renders an interactive
+schema graph (tables, fields, derived references, click-through detail panels),
+a security matrix of `client_access` per table and operation, cards for edge
+and RPC functions, and the realtime/storage surface. No server, no database
+access — the contract is parsed at build time and baked into static HTML:
+
+```bash
+cd cockpit && npm install
+CONTRACT=../example/supabase.yaml npm run build   # → cockpit/dist/
+```
+
+See [`cockpit/README.md`](cockpit/README.md) for details.
 
 ## License
 

@@ -98,7 +98,7 @@ void _validate(Map<String, dynamic> root) {
       }
       final t = (tableEntry.value as Map).cast<String, dynamic>();
       _requireString(t, 'ownership', '$loc.ownership');
-      _requireString(t, 'primary_key', '$loc.primary_key');
+      _requirePrimaryKey(t, '$loc.primary_key');
       if (t['fields'] is! Map) {
         throw ContractError(
             "$loc.fields is required and must be a mapping of column → type.");
@@ -177,6 +177,21 @@ void _validateRpcFunctions(Map<String, dynamic> root) {
           'integer | boolean | json | void | row:<table> | rows:<table>.');
     }
   }
+}
+
+/// `primary_key` accepts a column name or a non-empty list of column names
+/// (composite key), e.g. `primary_key: id` or `primary_key: [session_id, user_id]`.
+void _requirePrimaryKey(Map<String, dynamic> table, String loc) {
+  final v = table['primary_key'];
+  if (v is String && v.isNotEmpty) return;
+  if (v is List &&
+      v.isNotEmpty &&
+      v.every((e) => e is String && e.isNotEmpty)) {
+    return;
+  }
+  throw ContractError(
+      '$loc is required and must be a column name or a non-empty list of '
+      'column names (composite key).');
 }
 
 void _requireMap(Map<String, dynamic> parent, String key) {
