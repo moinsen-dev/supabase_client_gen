@@ -46,6 +46,10 @@ The result is a fully static site in `dist/` — no server, no database
 access, deterministic output. Host it anywhere (GitHub Pages, Cloudflare
 Pages, an S3 bucket) or open it straight from a local web server.
 
+The product landing page ([`../landing/`](../landing/)) embeds this cockpit
+as a live demo: its `build:full` script builds it with `BASE_PATH=/demo/`
+(plus an env-driven `DEMO_BANNER`) and serves it under `/demo/`.
+
 ## The `CONTRACT` variable
 
 `CONTRACT` is resolved at build time, relative to the `cockpit/` directory
