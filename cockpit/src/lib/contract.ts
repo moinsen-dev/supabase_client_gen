@@ -32,7 +32,8 @@ export interface TableInfo {
   kind: string;
   ownership: string | null;
   description: string | null;
-  primaryKey: string | null;
+  /** One entry for a scalar primary_key, several for the composite list form. */
+  primaryKey: string[];
   fields: FieldInfo[];
   clientAccess: Record<string, string>;
 }
@@ -164,7 +165,14 @@ function parseTables(dataModel: Record<string, unknown>): TableInfo[] {
       const fieldsRaw = asRecord(def.fields);
       const nullable = new Set(asStringList(def.nullable_fields));
       const enumValues = asRecord(def.enum_values);
-      const primaryKey = def.primary_key != null ? String(def.primary_key) : null;
+      // primary_key is a scalar (`id`) or a list for composite keys
+      // (`[session_id, user_id]`).
+      const primaryKey = Array.isArray(def.primary_key)
+        ? def.primary_key.map(String)
+        : def.primary_key != null
+          ? [String(def.primary_key)]
+          : [];
+      const pkSet = new Set(primaryKey);
 
       const fields: FieldInfo[] = Object.entries(fieldsRaw).map(([name, type]) => {
         const typeStr = String(type);
@@ -173,7 +181,7 @@ function parseTables(dataModel: Record<string, unknown>): TableInfo[] {
           name,
           type: typeStr,
           nullable: nullable.has(name),
-          isPrimaryKey: name === primaryKey,
+          isPrimaryKey: pkSet.has(name),
           enumValues: Array.isArray(enums) ? enums.map(String) : null,
         };
       });

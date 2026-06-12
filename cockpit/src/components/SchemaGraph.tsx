@@ -143,9 +143,9 @@ function DetailPanel({ table, onClose }: { table: TableInfo; onClose: () => void
                 {' · '}ownership <code>{table.ownership}</code>
               </>
             )}
-            {table.primaryKey && (
+            {table.primaryKey.length > 0 && (
               <>
-                {' · '}pk <code>{table.primaryKey}</code>
+                {' · '}pk <code>{table.primaryKey.join(', ')}</code>
               </>
             )}
           </div>
