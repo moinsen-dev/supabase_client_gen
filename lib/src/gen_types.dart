@@ -17,6 +17,19 @@ class GenTypes {
   /// contract entries declared `kind: view` are checked against.
   final Set<String> viewNames;
 
+  /// Raw TypeScript type per table `Row` member (e.g. `string | null`,
+  /// `Database["public"]["Enums"]["mood"]`). Backs `init --from-gen-types`.
+  final Map<String, Map<String, String>> rowTypes;
+
+  /// Columns per view (from the view's `Row` block).
+  final Map<String, Set<String>> viewColumns;
+
+  /// Raw TypeScript type per view `Row` member.
+  final Map<String, Map<String, String>> viewRowTypes;
+
+  /// Enum name → string literal values from the `Enums` scope.
+  final Map<String, List<String>> enumValues;
+
   const GenTypes({
     required this.tableNames,
     required this.tableColumns,
@@ -24,6 +37,10 @@ class GenTypes {
     required this.enumNames,
     this.functionNames = const {},
     this.viewNames = const {},
+    this.rowTypes = const {},
+    this.viewColumns = const {},
+    this.viewRowTypes = const {},
+    this.enumValues = const {},
   });
 
   factory GenTypes.parse(String ts) {
@@ -33,6 +50,11 @@ class GenTypes {
     final enumNames = <String>{};
     final functionNames = <String>{};
     final viewNames = <String>{};
+    final rowTypes = <String, Map<String, String>>{};
+    final viewColumns = <String, Set<String>>{};
+    final viewRowTypes = <String, Map<String, String>>{};
+    final enumValues = <String, List<String>>{};
+    String? currentEnum;
 
     final lines = ts.split('\n');
 
@@ -49,9 +71,11 @@ class GenTypes {
     var state = 'wait';
     var scopeDepth = 0; // depth when current scope started
     var inSubBlock = false; // inside Row/Insert/Update
+    String? subBlockName; // which of Row/Insert/Update we are in
     var inRelationships = false;
     var relDepth = 0; // depth when Relationships started
     String? currentTable;
+    String? currentView;
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
@@ -111,15 +135,17 @@ class GenTypes {
           }
 
           // Enter sub-block
-          if (!inSubBlock &&
-              RegExp(r'^(Row|Insert|Update):').hasMatch(trimmed)) {
+          final subMatch = RegExp(r'^(Row|Insert|Update):').firstMatch(trimmed);
+          if (!inSubBlock && subMatch != null) {
             inSubBlock = true;
+            subBlockName = subMatch.group(1);
             break;
           }
 
           // Exit sub-block
           if (inSubBlock && trimmed == '}') {
             inSubBlock = false;
+            subBlockName = null;
             break;
           }
 
@@ -148,6 +174,7 @@ class GenTypes {
               tableNames.add(table);
               tableColumns[table] = {};
               columnNullability[table] = {};
+              rowTypes[table] = {};
               break;
             }
           }
@@ -162,6 +189,10 @@ class GenTypes {
               final nullable = colMatch.group(2) == '?';
               tableColumns[currentTable]!.add(colName);
               columnNullability[currentTable]![colName] = nullable;
+              if (subBlockName == 'Row') {
+                rowTypes[currentTable]![colName] =
+                    trimmed.substring(trimmed.indexOf(':') + 1).trim();
+              }
             }
           }
           break;
@@ -175,7 +206,40 @@ class GenTypes {
           // live one level deeper.
           if (depthBefore == scopeDepth + 1) {
             final viewMatch = RegExp(r'^(\w+)\??:').firstMatch(trimmed);
-            if (viewMatch != null) viewNames.add(viewMatch.group(1)!);
+            if (viewMatch != null) {
+              currentView = viewMatch.group(1)!;
+              viewNames.add(currentView);
+              viewColumns[currentView] = {};
+              viewRowTypes[currentView] = {};
+              inSubBlock = false;
+              subBlockName = null;
+            }
+            break;
+          }
+          // Row members of the current view (Insert/Update never exist on
+          // read-only views; updatable views may carry them — only Row counts).
+          {
+            final subMatch =
+                RegExp(r'^(Row|Insert|Update):').firstMatch(trimmed);
+            if (!inSubBlock && subMatch != null) {
+              inSubBlock = true;
+              subBlockName = subMatch.group(1);
+              break;
+            }
+            if (inSubBlock && trimmed == '}') {
+              inSubBlock = false;
+              subBlockName = null;
+              break;
+            }
+            if (inSubBlock && subBlockName == 'Row' && currentView != null) {
+              final colMatch = RegExp(r'^(\w+)(\??):').firstMatch(trimmed);
+              if (colMatch != null) {
+                final colName = colMatch.group(1)!;
+                viewColumns[currentView]!.add(colName);
+                viewRowTypes[currentView]![colName] =
+                    trimmed.substring(trimmed.indexOf(':') + 1).trim();
+              }
+            }
           }
           break;
 
@@ -199,7 +263,15 @@ class GenTypes {
           }
           final enumMatch = RegExp(r'^(\w+):').firstMatch(trimmed);
           if (enumMatch != null && enumMatch.group(1) != 'schema') {
-            enumNames.add(enumMatch.group(1)!);
+            final enumName = enumMatch.group(1)!;
+            enumNames.add(enumName);
+            currentEnum = enumName;
+            enumValues[enumName] = _enumLiterals(
+              trimmed.substring(trimmed.indexOf(':') + 1),
+            );
+          } else if (currentEnum != null && trimmed.startsWith('|')) {
+            // Multi-line union continuation: `| "value"`.
+            enumValues[currentEnum]!.addAll(_enumLiterals(trimmed));
           }
           break;
       }
@@ -212,11 +284,22 @@ class GenTypes {
       enumNames: enumNames,
       functionNames: functionNames,
       viewNames: viewNames,
+      rowTypes: rowTypes,
+      viewColumns: viewColumns,
+      viewRowTypes: viewRowTypes,
+      enumValues: enumValues,
     );
   }
 
   static bool _scopeMatch(String trimmed, String name) =>
       trimmed == '$name: {' || trimmed == '$name:';
+
+  /// Extracts double-quoted string literals from a TS union type fragment,
+  /// e.g. `"happy" | "sad"` → `[happy, sad]`.
+  static List<String> _enumLiterals(String fragment) => RegExp(r'"([^"]*)"')
+      .allMatches(fragment)
+      .map((m) => m.group(1)!)
+      .toList();
 }
 
 /// Checks for migrations that postdate the contract.

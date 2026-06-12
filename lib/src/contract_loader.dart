@@ -24,10 +24,19 @@ SupabaseContract loadContract(String path) {
   if (!file.existsSync()) {
     throw ContractError('Contract file not found: $path');
   }
+  return loadContractFromString(file.readAsStringSync(), sourceName: path);
+}
 
+/// Parses, validates and builds a contract from YAML [content].
+/// [sourceName] is used in error messages in place of a file path.
+SupabaseContract loadContractFromString(
+  String content, {
+  String sourceName = '<string>',
+}) {
+  final path = sourceName;
   final dynamic raw;
   try {
-    raw = loadYaml(file.readAsStringSync());
+    raw = loadYaml(content);
   } catch (e) {
     throw ContractError('Could not parse YAML in $path:\n  $e');
   }
